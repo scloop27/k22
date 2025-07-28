@@ -1,6 +1,13 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+
+// Extend Express Request interface to include session
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+  }
+}
 import { 
   insertLodgeSettingsSchema, 
   insertRoomSchema, 
@@ -26,8 +33,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Simple session - in production use proper session management
-      req.session = { userId: user.id };
+      // Set user ID in session
+      req.session.userId = user.id;
       
       res.json({ user: { id: user.id, username: user.username } });
     } catch (error) {
@@ -36,8 +43,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session = null;
-    res.json({ message: "Logged out" });
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Could not log out" });
+      }
+      res.json({ message: "Logged out" });
+    });
   });
 
   app.get("/api/auth/me", async (req, res) => {

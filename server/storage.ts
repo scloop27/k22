@@ -108,6 +108,7 @@ export class MemStorage implements IStorage {
       id,
       taxRate: settings.taxRate || "18.00",
       currency: settings.currency || "INR",
+      smsTemplate: settings.smsTemplate || null,
       defaultCheckinTime: settings.defaultCheckinTime || "12:00",
       defaultCheckoutTime: settings.defaultCheckoutTime || "11:00",
       isSetupComplete: settings.isSetupComplete || false
@@ -203,6 +204,7 @@ export class MemStorage implements IStorage {
     const newGuest: Guest = { 
       ...guest, 
       id,
+      roomId: guest.roomId || null,
       numberOfGuests: guest.numberOfGuests || 1,
       status: guest.status || "active",
       createdAt: new Date()
