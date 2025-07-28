@@ -72,8 +72,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/lodge-settings", async (req, res) => {
     try {
       const settings = await storage.getLodgeSettings();
-      res.json(settings);
+      res.json(settings || null);
     } catch (error) {
+      console.error("Error fetching lodge settings:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

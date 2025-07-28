@@ -27,13 +27,21 @@ export default function Login() {
       console.log("Login successful:", loginData);
       
       // Check if lodge settings exist to determine if onboarding is needed
-      const settingsResponse = await apiRequest("GET", "/api/lodge-settings");
-      const settings = await settingsResponse.json();
-      
-      if (!settings || !settings.isSetupComplete) {
+      try {
+        const settingsResponse = await apiRequest("GET", "/api/lodge-settings");
+        const settings = await settingsResponse.json();
+        
+        console.log("Lodge settings:", settings);
+        
+        if (!settings || !settings.isSetupComplete) {
+          setLocation("/onboarding");
+        } else {
+          setLocation("/dashboard");
+        }
+      } catch (settingsError) {
+        console.error("Settings fetch error:", settingsError);
+        // If settings fetch fails, assume onboarding is needed
         setLocation("/onboarding");
-      } else {
-        setLocation("/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);
