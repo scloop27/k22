@@ -21,7 +21,10 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await apiRequest("POST", "/api/auth/login", { username, password });
+      const loginResponse = await apiRequest("POST", "/api/auth/login", { username, password });
+      const loginData = await loginResponse.json();
+      
+      console.log("Login successful:", loginData);
       
       // Check if lodge settings exist to determine if onboarding is needed
       const settingsResponse = await apiRequest("GET", "/api/lodge-settings");
@@ -33,6 +36,7 @@ export default function Login() {
         setLocation("/dashboard");
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
         description: "Invalid username or password",
