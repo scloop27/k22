@@ -1,0 +1,88 @@
+# Lodge Management Platform - Phase 1 MVP Product Requirements Document (PRD)
+
+This PRD outlines the core idea and functional requirements for building a simple lodge management platform focused on Phase 1 (MVP). The platform is designed for a single admin user (e.g., lodge owner) to manage room allocations, track daily sales, handle guest registrations, process payments via cash or static QR code, and send bills via SMS. It includes bilingual support in English and Telugu, displaying both languages side by side in a bracketed format (e.g., "Name (పేరు)"). The goal is to create an intuitive admin dashboard for efficient daily operations at a lodge like Meenakshi Lodge & Boarding in Hyderabad, Telangana, without any complex integrations or multi-user roles.
+
+## Product Overview
+The platform is an admin-only web-based dashboard for managing a small lodge. It streamlines room bookings, guest data collection, basic payments, and reporting, with automated SMS billing. Key principles:
+- Simplicity: Focus on essential features for quick daily use.
+- Bilingual Interface: All labels, forms, and messages show English first, followed by Telugu in parentheses (e.g., "Room Number (గది సంఖ్య)").
+- Payment Handling: Treat cash and QR code payments identically—manual verification by admin, no automated checks.
+- Onboarding Flow: Easy initial setup for lodge details and rooms.
+
+Target User: Lodge owner/admin in Telangana, who may prefer Telugu for local operations but needs English for broader accessibility.
+
+## Core Features
+### 1. Admin Authentication
+- Secure login page with username and password.
+- Single admin role with full access to all features.
+- Basic session management to keep the user logged in during use.
+
+### 2. Lodge Onboarding and Settings
+- Initial setup wizard on first login:
+  - Enter lodge details: Name, address, contact info.
+  - Define room inventory: Add rooms with numbers, types (e.g., single, double), and base pricing.
+  - Set tax rates and billing preferences (e.g., SMS message templates).
+- Settings page to edit these details later, with bilingual labels (e.g., "Lodge Name (లాడ్జ్ పేరు)").
+
+### 3. Guest Registration and Details Collection
+- Form to register new guests with required fields:
+  - Name (పేరు)
+  - Phone Number (ఫోన్ నంబర్)
+  - Aadhar Number (ఆధార్ నంబర్)
+  - Check-in Date (చెక్-ఇన్ తేదీ)
+  - Check-out Date (చెక్-ఔట్ తేదీ)
+  - Other basic details (e.g., number of guests).
+- Dynamic cost calculation: Automatically compute total based on room type, duration, and taxes.
+- Search for existing guests to avoid duplicates.
+
+### 4. Room Management and Allotment
+- Visual grid or list of all rooms showing statuses: Available (లభ్యమైనది), Occupied (ఆక్రమించినది), Maintenance (మెయింటెనెన్స్).
+- Check availability by date and type.
+- Assign room to a guest from the registration form, updating status automatically.
+- Quick actions: Check-in, check-out, mark for housekeeping.
+
+### 5. Payment Processing
+- Options: Cash (నగదు) or QR Code (QR కోడ్)—both handled manually.
+- For QR: Display instructions for guest to scan a static desk QR code and pay the amount directly (no app involvement in verification).
+- Admin marks payment as "Paid (చెల్లించబడింది)" after manual confirmation (e.g., via bank notification).
+- Log payment type and amount in the system.
+
+### 6. Billing and SMS Sending
+- Generate bill with breakdown: Room charges, taxes, total.
+- Send bill via SMS to guest's phone number, including bilingual text (e.g., "Your bill: INR 1500 (మీ బిల్: INR 1500)").
+- Option to send receipt after payment.
+- Track sent messages with status (e.g., delivered).
+
+### 7. Admin Analytics and Reporting
+- Dashboard with daily overviews:
+  - Room availability: Count of vacant and occupied rooms.
+  - Daily sales revenue: Total earnings, broken down by room or payment type.
+- Simple charts or tables for visuals, with bilingual labels (e.g., "Daily Revenue (రోజువారీ ఆదాయం)").
+- Export reports as CSV for records.
+
+## User Flows
+### Onboarding Flow
+1. Admin logs in for the first time.
+2. Guided setup: Enter lodge info, add rooms, set preferences.
+3. Redirect to dashboard.
+
+### Daily Operations Flow
+1. Login to bilingual dashboard showing key metrics.
+2. Register guest and collect details.
+3. Check room availability and allot room (auto-calculate cost).
+4. Process payment: Select cash or QR, instruct guest, mark paid after verification.
+5. Generate and send bilingual SMS bill/receipt.
+6. Review daily analytics and export if needed.
+
+### Error Handling and Edge Cases
+- If no rooms available: Show alert like "No rooms available (గదులు లభ్యమైనవి లేవు)".
+- Invalid inputs: Validate fields (e.g., phone number format) with bilingual error messages.
+- Logout or session timeout: Redirect to login.
+
+## Non-Functional Requirements
+- Responsive design for desktop and mobile (e.g., usable on a tablet at the front desk).
+- Data persistence: Store all guest, room, and transaction data securely.
+- Performance: Quick loading for dashboard and forms.
+- Accessibility: Ensure bilingual text is readable, with proper font support for Telugu.
+
+This PRD captures the essential idea for the MVP, providing a functional foundation that can expand in future phases (e.g., adding staff roles or online bookings). Build it as a web app with the described features, focusing on usability for a Telugu-English bilingual context in Hyderabad.
