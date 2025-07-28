@@ -14,11 +14,9 @@ export const lodgeSettings = pgTable("lodge_settings", {
   name: text("name").notNull(),
   address: text("address").notNull(),
   contactNumber: text("contact_number").notNull(),
-  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).notNull().default("18.00"),
+  discountRate: decimal("discount_rate", { precision: 5, scale: 2 }).notNull().default("0.00"),
   currency: text("currency").notNull().default("INR"),
   smsTemplate: text("sms_template"),
-  defaultCheckinTime: text("default_checkin_time").default("12:00"),
-  defaultCheckoutTime: text("default_checkout_time").default("11:00"),
   isSetupComplete: boolean("is_setup_complete").default(false),
 });
 
@@ -40,6 +38,9 @@ export const guests = pgTable("guests", {
   checkoutDate: timestamp("checkout_date").notNull(),
   roomId: varchar("room_id").references(() => rooms.id),
   numberOfGuests: integer("number_of_guests").default(1),
+  totalDays: integer("total_days").notNull(),
+  baseAmount: decimal("base_amount", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("active"), // 'active', 'checked_out'
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),

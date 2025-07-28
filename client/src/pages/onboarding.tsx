@@ -29,7 +29,7 @@ export default function Onboarding() {
     name: "",
     contactNumber: "",
     address: "",
-    taxRate: "18.00",
+    discountRate: "0.00",
     currency: "INR"
   });
 
@@ -43,9 +43,7 @@ export default function Onboarding() {
 
   // Step 3: Preferences
   const [preferences, setPreferences] = useState({
-    smsTemplate: "Your bill from [LODGE_NAME]: ₹[AMOUNT]. Thank you for staying with us! (మీ బిల్ [LODGE_NAME] నుండి: ₹[AMOUNT]. మాతో ఉంటుండడానికి ధన్యవాదాలు!)",
-    defaultCheckinTime: "12:00",
-    defaultCheckoutTime: "11:00"
+    smsTemplate: "Your bill from [LODGE_NAME]: ₹[AMOUNT]. Thank you for staying with us! (మీ బిల్ [LODGE_NAME] నుండి: ₹[AMOUNT]. మాతో ఉంటుండడానికి ధన్యవాదాలు!)"
   });
 
   const addRoom = () => {
@@ -218,13 +216,13 @@ export default function Onboarding() {
                   
                   <div>
                     <Label className="font-telugu">
-                      <BilingualText english="Tax Rate" telugu="పన్ను రేటు" /> %
+                      <BilingualText english="Default Discount Rate" telugu="డిఫాల్ట్ తగ్గింపు రేటు" /> %
                     </Label>
                     <Input
                       type="number"
-                      value={lodgeDetails.taxRate}
-                      onChange={(e) => setLodgeDetails({...lodgeDetails, taxRate: e.target.value})}
-                      placeholder="18"
+                      value={lodgeDetails.discountRate}
+                      onChange={(e) => setLodgeDetails({...lodgeDetails, discountRate: e.target.value})}
+                      placeholder="0"
                       min="0"
                       max="100"
                       step="0.01"
@@ -398,30 +396,16 @@ export default function Onboarding() {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label className="font-telugu">
-                        <BilingualText english="Default Check-in Time" telugu="డిఫాల్ట్ చెక్-ఇన్ సమయం" />
-                      </Label>
-                      <Input
-                        type="time"
-                        value={preferences.defaultCheckinTime}
-                        onChange={(e) => setPreferences({...preferences, defaultCheckinTime: e.target.value})}
-                        className="mt-2"
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-800 mb-2 font-telugu">
+                      <BilingualText english="24-Hour Based Pricing" telugu="24 గంటల ఆధారిత ధర" />
+                    </h4>
+                    <p className="text-sm text-blue-700 font-telugu">
+                      <BilingualText 
+                        english="This system uses 24-hour periods for billing. Each day (or part of a day) is charged at the full room rate." 
+                        telugu="ఈ సిస్టం బిల్లింగ్ కోసం 24 గంటల కాలాలను ఉపయోగిస్తుంది. ప్రతి రోజు (లేదా రోజులో భాగం) పూర్తి గది ధరతో వసూలు చేయబడుతుంది." 
                       />
-                    </div>
-                    
-                    <div>
-                      <Label className="font-telugu">
-                        <BilingualText english="Default Check-out Time" telugu="డిఫాల్ట్ చెక్-అవుట్ సమయం" />
-                      </Label>
-                      <Input
-                        type="time"
-                        value={preferences.defaultCheckoutTime}
-                        onChange={(e) => setPreferences({...preferences, defaultCheckoutTime: e.target.value})}
-                        className="mt-2"
-                      />
-                    </div>
+                    </p>
                   </div>
                 </div>
                 

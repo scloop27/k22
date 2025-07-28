@@ -30,11 +30,12 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [costBreakdown, setCostBreakdown] = useState({
-    roomCharges: 0,
-    tax: 0,
-    total: 0,
-    nights: 0,
+    baseAmount: 0,
+    discountAmount: 0,
+    totalAmount: 0,
+    totalDays: 0,
   });
+  const [discountPercentage, setDiscountPercentage] = useState(0);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,7 +50,7 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
     if (formData.roomId && formData.checkinDate && formData.checkoutDate) {
       calculateCost();
     }
-  }, [formData.roomId, formData.checkinDate, formData.checkoutDate]);
+  }, [formData.roomId, formData.checkinDate, formData.checkoutDate, discountPercentage]);
 
   const checkAvailability = async () => {
     try {
@@ -67,17 +68,18 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
 
     const checkin = new Date(formData.checkinDate);
     const checkout = new Date(formData.checkoutDate);
-    const nights = Math.ceil((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24));
+    // Calculate 24-hour periods - minimum 1 day even for same day
+    const totalDays = Math.max(1, Math.ceil((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24)));
     
-    const roomCharges = parseFloat(selectedRoom.basePrice) * nights;
-    const tax = roomCharges * 0.18; // 18% tax
-    const total = roomCharges + tax;
+    const baseAmount = parseFloat(selectedRoom.basePrice) * totalDays;
+    const discountAmount = baseAmount * (discountPercentage / 100);
+    const totalAmount = baseAmount - discountAmount;
 
     setCostBreakdown({
-      roomCharges,
-      tax,
-      total,
-      nights,
+      baseAmount,
+      discountAmount,
+      totalAmount,
+      totalDays,
     });
   };
 
@@ -90,7 +92,10 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
         ...formData,
         checkinDate: new Date(formData.checkinDate).toISOString(),
         checkoutDate: new Date(formData.checkoutDate).toISOString(),
-        totalAmount: costBreakdown.total.toString(),
+        totalDays: costBreakdown.totalDays,
+        baseAmount: costBreakdown.baseAmount.toString(),
+        discountAmount: costBreakdown.discountAmount.toString(),
+        totalAmount: costBreakdown.totalAmount.toString(),
       });
 
       toast({
@@ -108,7 +113,8 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
         roomId: "",
         numberOfGuests: 1,
       });
-      setCostBreakdown({ roomCharges: 0, tax: 0, total: 0, nights: 0 });
+      setCostBreakdown({ baseAmount: 0, discountAmount: 0, totalAmount: 0, totalDays: 0 });
+      setDiscountPercentage(0);
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/guests"] });
@@ -241,8 +247,30 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
             </div>
           </div>
 
+          {/* Discount Input */}
+          {formData.roomId && formData.checkinDate && formData.checkoutDate && (
+            <div>
+              <Label className="font-telugu">
+                <BilingualText english="Discount %" telugu="తగ్గింపు %" />
+              </Label>
+              <Input
+                type="number"
+                value={discountPercentage}
+                onChange={(e) => {
+                  const value = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+                  setDiscountPercentage(value);
+                }}
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="Enter discount percentage"
+                className="mt-2"
+              />
+            </div>
+          )}
+
           {/* Cost Calculation */}
-          {costBreakdown.total > 0 && (
+          {costBreakdown.totalAmount > 0 && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-semibold mb-3 font-telugu">
                 <BilingualText english="Cost Breakdown" telugu="వ్యయ విభజన" />
@@ -252,19 +280,21 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
                   <span className="font-telugu">
                     <BilingualText english="Room charges" telugu="గది ఛార్జీలు" />:
                   </span>
-                  <span>₹{costBreakdown.roomCharges.toLocaleString()} ({costBreakdown.nights} nights)</span>
+                  <span>₹{costBreakdown.baseAmount.toLocaleString()} ({costBreakdown.totalDays} days)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-telugu">
-                    <BilingualText english="Tax (18%)" telugu="పన్ను (18%)" />:
-                  </span>
-                  <span>₹{costBreakdown.tax.toLocaleString()}</span>
-                </div>
+                {costBreakdown.discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="font-telugu">
+                      <BilingualText english={`Discount (${discountPercentage}%)`} telugu={`తగ్గింపు (${discountPercentage}%)`} />:
+                    </span>
+                    <span>-₹{costBreakdown.discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold border-t pt-2">
                   <span className="font-telugu">
                     <BilingualText english="Total Amount" telugu="మొత్తం" />:
                   </span>
-                  <span>₹{costBreakdown.total.toLocaleString()}</span>
+                  <span>₹{costBreakdown.totalAmount.toLocaleString()}</span>
                 </div>
               </div>
             </div>
