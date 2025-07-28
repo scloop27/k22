@@ -8,6 +8,14 @@ This is a bilingual (English/Telugu) lodge management platform designed for smal
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**Migration to Replit Environment (July 28, 2025)**
+- Successfully migrated project from Replit Agent to standard Replit environment
+- Fixed TypeScript compilation errors in storage.ts related to schema mismatches
+- Verified all core functionality: authentication, lodge setup, room management, guest registration
+- Project now runs cleanly with proper client-server separation and security practices
+
 ## System Architecture
 
 The application follows a modern full-stack architecture with clear separation between client and server:

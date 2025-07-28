@@ -130,11 +130,8 @@ export class MemStorage implements IStorage {
     const lodgeSettings: LodgeSettings = {
       ...settings,
       id,
-      taxRate: settings.taxRate || "18.00",
       currency: settings.currency || "INR",
       smsTemplate: settings.smsTemplate || null,
-      defaultCheckinTime: settings.defaultCheckinTime || "12:00",
-      defaultCheckoutTime: settings.defaultCheckoutTime || "11:00",
       isSetupComplete: settings.isSetupComplete || false,
     };
     this.lodgeSettings.set(id, lodgeSettings);
@@ -251,6 +248,7 @@ export class MemStorage implements IStorage {
       id,
       roomId: guest.roomId || null,
       numberOfGuests: guest.numberOfGuests || 1,
+      discountAmount: guest.discountAmount || "0.00",
       status: guest.status || "active",
       createdAt: new Date(),
     };
