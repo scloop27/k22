@@ -1,11 +1,22 @@
-import { 
-  type User, type InsertUser,
-  type LodgeSettings, type InsertLodgeSettings,
-  type Room, type InsertRoom,
-  type Guest, type InsertGuest,
-  type Payment, type InsertPayment,
-  type SmsLog, type InsertSmsLog,
-  users, lodgeSettings, rooms, guests, payments, smsLogs
+import {
+  type User,
+  type InsertUser,
+  type LodgeSettings,
+  type InsertLodgeSettings,
+  type Room,
+  type InsertRoom,
+  type Guest,
+  type InsertGuest,
+  type Payment,
+  type InsertPayment,
+  type SmsLog,
+  type InsertSmsLog,
+  users,
+  lodgeSettings,
+  rooms,
+  guests,
+  payments,
+  smsLogs,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -21,7 +32,10 @@ export interface IStorage {
   // Lodge settings methods
   getLodgeSettings(): Promise<LodgeSettings | undefined>;
   createLodgeSettings(settings: InsertLodgeSettings): Promise<LodgeSettings>;
-  updateLodgeSettings(id: string, settings: Partial<InsertLodgeSettings>): Promise<LodgeSettings | undefined>;
+  updateLodgeSettings(
+    id: string,
+    settings: Partial<InsertLodgeSettings>,
+  ): Promise<LodgeSettings | undefined>;
 
   // Room methods
   getAllRooms(): Promise<Room[]>;
@@ -38,7 +52,10 @@ export interface IStorage {
   getGuestsByPhone(phoneNumber: string): Promise<Guest[]>;
   getGuestsByAadhar(aadharNumber: string): Promise<Guest[]>;
   createGuest(guest: InsertGuest): Promise<Guest>;
-  updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined>;
+  updateGuest(
+    id: string,
+    guest: Partial<InsertGuest>,
+  ): Promise<Guest | undefined>;
   getActiveGuests(): Promise<Guest[]>;
 
   // Payment methods
@@ -46,7 +63,10 @@ export interface IStorage {
   getPayment(id: string): Promise<Payment | undefined>;
   getPaymentsByGuest(guestId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
-  updatePayment(id: string, payment: Partial<InsertPayment>): Promise<Payment | undefined>;
+  updatePayment(
+    id: string,
+    payment: Partial<InsertPayment>,
+  ): Promise<Payment | undefined>;
   getPendingPayments(): Promise<Payment[]>;
 
   // SMS log methods
@@ -75,7 +95,7 @@ export class MemStorage implements IStorage {
     const admin: User = {
       id: adminId,
       username: "admin",
-      password: "admin123" // In production, this should be hashed
+      password: "admin123", // In production, this should be hashed
     };
     this.users.set(adminId, admin);
   }
@@ -86,7 +106,9 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -101,26 +123,31 @@ export class MemStorage implements IStorage {
     return Array.from(this.lodgeSettings.values())[0];
   }
 
-  async createLodgeSettings(settings: InsertLodgeSettings): Promise<LodgeSettings> {
+  async createLodgeSettings(
+    settings: InsertLodgeSettings,
+  ): Promise<LodgeSettings> {
     const id = randomUUID();
-    const lodgeSettings: LodgeSettings = { 
-      ...settings, 
+    const lodgeSettings: LodgeSettings = {
+      ...settings,
       id,
       taxRate: settings.taxRate || "18.00",
       currency: settings.currency || "INR",
       smsTemplate: settings.smsTemplate || null,
       defaultCheckinTime: settings.defaultCheckinTime || "12:00",
       defaultCheckoutTime: settings.defaultCheckoutTime || "11:00",
-      isSetupComplete: settings.isSetupComplete || false
+      isSetupComplete: settings.isSetupComplete || false,
     };
     this.lodgeSettings.set(id, lodgeSettings);
     return lodgeSettings;
   }
 
-  async updateLodgeSettings(id: string, settings: Partial<InsertLodgeSettings>): Promise<LodgeSettings | undefined> {
+  async updateLodgeSettings(
+    id: string,
+    settings: Partial<InsertLodgeSettings>,
+  ): Promise<LodgeSettings | undefined> {
     const existing = this.lodgeSettings.get(id);
     if (!existing) return undefined;
-    
+
     const updated: LodgeSettings = { ...existing, ...settings };
     this.lodgeSettings.set(id, updated);
     return updated;
@@ -136,25 +163,30 @@ export class MemStorage implements IStorage {
   }
 
   async getRoomByNumber(roomNumber: string): Promise<Room | undefined> {
-    return Array.from(this.rooms.values()).find(room => room.roomNumber === roomNumber);
+    return Array.from(this.rooms.values()).find(
+      (room) => room.roomNumber === roomNumber,
+    );
   }
 
   async createRoom(room: InsertRoom): Promise<Room> {
     const id = randomUUID();
-    const newRoom: Room = { 
-      ...room, 
+    const newRoom: Room = {
+      ...room,
       id,
       status: room.status || "available",
-      floor: room.floor || 1
+      floor: room.floor || 1,
     };
     this.rooms.set(id, newRoom);
     return newRoom;
   }
 
-  async updateRoom(id: string, room: Partial<InsertRoom>): Promise<Room | undefined> {
+  async updateRoom(
+    id: string,
+    room: Partial<InsertRoom>,
+  ): Promise<Room | undefined> {
     const existing = this.rooms.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Room = { ...existing, ...room };
     this.rooms.set(id, updated);
     return updated;
@@ -164,22 +196,31 @@ export class MemStorage implements IStorage {
     return this.rooms.delete(id);
   }
 
-  async getAvailableRooms(checkinDate: Date, checkoutDate: Date): Promise<Room[]> {
-    const availableRooms = Array.from(this.rooms.values()).filter(room => room.status === "available");
-    
+  async getAvailableRooms(
+    checkinDate: Date,
+    checkoutDate: Date,
+  ): Promise<Room[]> {
+    const availableRooms = Array.from(this.rooms.values()).filter(
+      (room) => room.status === "available",
+    );
+
     // Check for overlapping bookings
-    const overlappingGuests = Array.from(this.guests.values()).filter(guest => {
-      if (guest.status !== "active") return false;
-      
-      const guestCheckin = new Date(guest.checkinDate);
-      const guestCheckout = new Date(guest.checkoutDate);
-      
-      return (checkinDate < guestCheckout && checkoutDate > guestCheckin);
-    });
-    
-    const occupiedRoomIds = new Set(overlappingGuests.map(guest => guest.roomId));
-    
-    return availableRooms.filter(room => !occupiedRoomIds.has(room.id));
+    const overlappingGuests = Array.from(this.guests.values()).filter(
+      (guest) => {
+        if (guest.status !== "active") return false;
+
+        const guestCheckin = new Date(guest.checkinDate);
+        const guestCheckout = new Date(guest.checkoutDate);
+
+        return checkinDate < guestCheckout && checkoutDate > guestCheckin;
+      },
+    );
+
+    const occupiedRoomIds = new Set(
+      overlappingGuests.map((guest) => guest.roomId),
+    );
+
+    return availableRooms.filter((room) => !occupiedRoomIds.has(room.id));
   }
 
   // Guest methods
@@ -192,38 +233,47 @@ export class MemStorage implements IStorage {
   }
 
   async getGuestsByPhone(phoneNumber: string): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(guest => guest.phoneNumber === phoneNumber);
+    return Array.from(this.guests.values()).filter(
+      (guest) => guest.phoneNumber === phoneNumber,
+    );
   }
 
   async getGuestsByAadhar(aadharNumber: string): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(guest => guest.aadharNumber === aadharNumber);
+    return Array.from(this.guests.values()).filter(
+      (guest) => guest.aadharNumber === aadharNumber,
+    );
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {
     const id = randomUUID();
-    const newGuest: Guest = { 
-      ...guest, 
+    const newGuest: Guest = {
+      ...guest,
       id,
       roomId: guest.roomId || null,
       numberOfGuests: guest.numberOfGuests || 1,
       status: guest.status || "active",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.guests.set(id, newGuest);
     return newGuest;
   }
 
-  async updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined> {
+  async updateGuest(
+    id: string,
+    guest: Partial<InsertGuest>,
+  ): Promise<Guest | undefined> {
     const existing = this.guests.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Guest = { ...existing, ...guest };
     this.guests.set(id, updated);
     return updated;
   }
 
   async getActiveGuests(): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(guest => guest.status === "active");
+    return Array.from(this.guests.values()).filter(
+      (guest) => guest.status === "active",
+    );
   }
 
   // Payment methods
@@ -236,91 +286,127 @@ export class MemStorage implements IStorage {
   }
 
   async getPaymentsByGuest(guestId: string): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(payment => payment.guestId === guestId);
+    return Array.from(this.payments.values()).filter(
+      (payment) => payment.guestId === guestId,
+    );
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const id = randomUUID();
-    const newPayment: Payment = { 
-      ...payment, 
+    const newPayment: Payment = {
+      ...payment,
       id,
       status: payment.status || "pending",
       createdAt: new Date(),
-      paidAt: null
+      paidAt: null,
     };
     this.payments.set(id, newPayment);
     return newPayment;
   }
 
-  async updatePayment(id: string, payment: Partial<InsertPayment>): Promise<Payment | undefined> {
+  async updatePayment(
+    id: string,
+    payment: Partial<InsertPayment>,
+  ): Promise<Payment | undefined> {
     const existing = this.payments.get(id);
     if (!existing) return undefined;
-    
-    const updated: Payment = { 
-      ...existing, 
+
+    const updated: Payment = {
+      ...existing,
       ...payment,
-      paidAt: payment.status === "paid" ? new Date() : existing.paidAt
+      paidAt: payment.status === "paid" ? new Date() : existing.paidAt,
     };
     this.payments.set(id, updated);
     return updated;
   }
 
   async getPendingPayments(): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(payment => payment.status === "pending");
+    return Array.from(this.payments.values()).filter(
+      (payment) => payment.status === "pending",
+    );
   }
 
   // SMS log methods
   async createSmsLog(smsLog: InsertSmsLog): Promise<SmsLog> {
     const id = randomUUID();
-    const newSmsLog: SmsLog = { 
-      ...smsLog, 
+    const newSmsLog: SmsLog = {
+      ...smsLog,
       id,
       status: smsLog.status || "sent",
-      sentAt: new Date()
+      sentAt: new Date(),
     };
     this.smsLogs.set(id, newSmsLog);
     return newSmsLog;
   }
 
   async getSmsLogsByGuest(guestId: string): Promise<SmsLog[]> {
-    return Array.from(this.smsLogs.values()).filter(log => log.guestId === guestId);
+    return Array.from(this.smsLogs.values()).filter(
+      (log) => log.guestId === guestId,
+    );
   }
 }
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
+  private initPromise: Promise<void>;
 
   constructor() {
     const sql = neon(process.env.DATABASE_URL!);
     this.db = drizzle(sql);
-    
+
     // Initialize default admin user if it doesn't exist
-    this.initializeAdminUser();
+    this.initPromise = this.initializeAdminUser();
   }
 
   private async initializeAdminUser() {
     try {
-      const existingAdmin = await this.getUserByUsername("admin");
+      console.log("Checking for admin user...");
+      // Direct database call to avoid circular dependency
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.username, "admin"))
+        .limit(1);
+      const existingAdmin = result[0];
+      
       if (!existingAdmin) {
-        await this.createUser({
+        console.log("Creating default admin user...");
+        await this.db.insert(users).values({
           username: "admin",
-          password: "admin123" // In production, this should be hashed
+          password: "admin123", // In production, this should be hashed
         });
+        console.log("Default admin user created successfully");
+      } else {
+        console.log("Admin user already exists");
       }
     } catch (error) {
       console.error("Failed to initialize admin user:", error);
+      throw error;
     }
+  }
+
+  private async ensureInitialized() {
+    await this.initPromise;
   }
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
     return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    await this.ensureInitialized();
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
     return result[0];
   }
 
@@ -335,13 +421,22 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createLodgeSettings(settings: InsertLodgeSettings): Promise<LodgeSettings> {
-    const result = await this.db.insert(lodgeSettings).values(settings).returning();
+  async createLodgeSettings(
+    settings: InsertLodgeSettings,
+  ): Promise<LodgeSettings> {
+    const result = await this.db
+      .insert(lodgeSettings)
+      .values(settings)
+      .returning();
     return result[0];
   }
 
-  async updateLodgeSettings(id: string, settings: Partial<InsertLodgeSettings>): Promise<LodgeSettings | undefined> {
-    const result = await this.db.update(lodgeSettings)
+  async updateLodgeSettings(
+    id: string,
+    settings: Partial<InsertLodgeSettings>,
+  ): Promise<LodgeSettings | undefined> {
+    const result = await this.db
+      .update(lodgeSettings)
       .set(settings)
       .where(eq(lodgeSettings.id, id))
       .returning();
@@ -354,12 +449,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRoom(id: string): Promise<Room | undefined> {
-    const result = await this.db.select().from(rooms).where(eq(rooms.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, id))
+      .limit(1);
     return result[0];
   }
 
   async getRoomByNumber(roomNumber: string): Promise<Room | undefined> {
-    const result = await this.db.select().from(rooms).where(eq(rooms.roomNumber, roomNumber)).limit(1);
+    const result = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.roomNumber, roomNumber))
+      .limit(1);
     return result[0];
   }
 
@@ -368,8 +471,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateRoom(id: string, room: Partial<InsertRoom>): Promise<Room | undefined> {
-    const result = await this.db.update(rooms)
+  async updateRoom(
+    id: string,
+    room: Partial<InsertRoom>,
+  ): Promise<Room | undefined> {
+    const result = await this.db
+      .update(rooms)
       .set(room)
       .where(eq(rooms.id, id))
       .returning();
@@ -381,24 +488,33 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  async getAvailableRooms(checkinDate: Date, checkoutDate: Date): Promise<Room[]> {
+  async getAvailableRooms(
+    checkinDate: Date,
+    checkoutDate: Date,
+  ): Promise<Room[]> {
     // Get all available rooms
-    const availableRooms = await this.db.select().from(rooms).where(eq(rooms.status, "available"));
-    
+    const availableRooms = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.status, "available"));
+
     // Get overlapping bookings
-    const overlappingGuests = await this.db.select()
+    const overlappingGuests = await this.db
+      .select()
       .from(guests)
       .where(
         and(
           eq(guests.status, "active"),
           lt(guests.checkinDate, checkoutDate),
-          gt(guests.checkoutDate, checkinDate)
-        )
+          gt(guests.checkoutDate, checkinDate),
+        ),
       );
-    
-    const occupiedRoomIds = new Set(overlappingGuests.map(guest => guest.roomId).filter(Boolean));
-    
-    return availableRooms.filter(room => !occupiedRoomIds.has(room.id));
+
+    const occupiedRoomIds = new Set(
+      overlappingGuests.map((guest) => guest.roomId).filter(Boolean),
+    );
+
+    return availableRooms.filter((room) => !occupiedRoomIds.has(room.id));
   }
 
   // Guest methods
@@ -407,16 +523,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGuest(id: string): Promise<Guest | undefined> {
-    const result = await this.db.select().from(guests).where(eq(guests.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(guests)
+      .where(eq(guests.id, id))
+      .limit(1);
     return result[0];
   }
 
   async getGuestsByPhone(phoneNumber: string): Promise<Guest[]> {
-    return await this.db.select().from(guests).where(eq(guests.phoneNumber, phoneNumber));
+    return await this.db
+      .select()
+      .from(guests)
+      .where(eq(guests.phoneNumber, phoneNumber));
   }
 
   async getGuestsByAadhar(aadharNumber: string): Promise<Guest[]> {
-    return await this.db.select().from(guests).where(eq(guests.aadharNumber, aadharNumber));
+    return await this.db
+      .select()
+      .from(guests)
+      .where(eq(guests.aadharNumber, aadharNumber));
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {
@@ -424,8 +550,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined> {
-    const result = await this.db.update(guests)
+  async updateGuest(
+    id: string,
+    guest: Partial<InsertGuest>,
+  ): Promise<Guest | undefined> {
+    const result = await this.db
+      .update(guests)
       .set(guest)
       .where(eq(guests.id, id))
       .returning();
@@ -433,7 +563,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveGuests(): Promise<Guest[]> {
-    return await this.db.select().from(guests).where(eq(guests.status, "active"));
+    return await this.db
+      .select()
+      .from(guests)
+      .where(eq(guests.status, "active"));
   }
 
   // Payment methods
@@ -442,12 +575,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPayment(id: string): Promise<Payment | undefined> {
-    const result = await this.db.select().from(payments).where(eq(payments.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id))
+      .limit(1);
     return result[0];
   }
 
   async getPaymentsByGuest(guestId: string): Promise<Payment[]> {
-    return await this.db.select().from(payments).where(eq(payments.guestId, guestId));
+    return await this.db
+      .select()
+      .from(payments)
+      .where(eq(payments.guestId, guestId));
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
@@ -455,8 +595,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updatePayment(id: string, payment: Partial<InsertPayment>): Promise<Payment | undefined> {
-    const result = await this.db.update(payments)
+  async updatePayment(
+    id: string,
+    payment: Partial<InsertPayment>,
+  ): Promise<Payment | undefined> {
+    const result = await this.db
+      .update(payments)
       .set(payment)
       .where(eq(payments.id, id))
       .returning();
@@ -464,7 +608,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingPayments(): Promise<Payment[]> {
-    return await this.db.select().from(payments).where(eq(payments.status, "pending"));
+    return await this.db
+      .select()
+      .from(payments)
+      .where(eq(payments.status, "pending"));
   }
 
   // SMS log methods
@@ -474,9 +621,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSmsLogsByGuest(guestId: string): Promise<SmsLog[]> {
-    return await this.db.select().from(smsLogs).where(eq(smsLogs.guestId, guestId));
+    return await this.db
+      .select()
+      .from(smsLogs)
+      .where(eq(smsLogs.guestId, guestId));
   }
 }
 
 // Use database storage in production, memory storage for development
-export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
+export const storage = process.env.DATABASE_URL
+  ? new DatabaseStorage()
+  : new MemStorage();
