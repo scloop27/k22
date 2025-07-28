@@ -18,9 +18,7 @@ import {
   payments,
   smsLogs,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { db } from "./db";
 import { eq, and, lt, gt, inArray } from "drizzle-orm";
 
 export interface IStorage {
@@ -74,185 +72,158 @@ export interface IStorage {
   getSmsLogsByGuest(guestId: string): Promise<SmsLog[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private lodgeSettings: Map<string, LodgeSettings>;
-  private rooms: Map<string, Room>;
-  private guests: Map<string, Guest>;
-  private payments: Map<string, Payment>;
-  private smsLogs: Map<string, SmsLog>;
+export class DatabaseStorage implements IStorage {
+  private initPromise: Promise<void>;
 
   constructor() {
-    this.users = new Map();
-    this.lodgeSettings = new Map();
-    this.rooms = new Map();
-    this.guests = new Map();
-    this.payments = new Map();
-    this.smsLogs = new Map();
+    // Initialize default admin user if it doesn't exist
+    this.initPromise = this.initializeAdminUser();
+  }
 
-    // Create default admin user
-    const adminId = randomUUID();
-    const admin: User = {
-      id: adminId,
-      username: "admin",
-      password: "admin123", // In production, this should be hashed
-    };
-    this.users.set(adminId, admin);
+  private async initializeAdminUser() {
+    try {
+      const existingAdmin = await this.getUserByUsername("admin");
+      if (!existingAdmin) {
+        await this.createUser({
+          username: "admin",
+          password: "admin123", // In production, this should be hashed
+        });
+      }
+    } catch (error) {
+      console.error("Failed to initialize admin user:", error);
+    }
   }
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Lodge settings methods
   async getLodgeSettings(): Promise<LodgeSettings | undefined> {
-    return Array.from(this.lodgeSettings.values())[0];
+    const [settings] = await db.select().from(lodgeSettings).limit(1);
+    return settings || undefined;
   }
 
   async createLodgeSettings(
     settings: InsertLodgeSettings,
   ): Promise<LodgeSettings> {
-    const id = randomUUID();
-    const lodgeSettings: LodgeSettings = {
-      ...settings,
-      id,
-      currency: settings.currency || "INR",
-      smsTemplate: settings.smsTemplate || null,
-      isSetupComplete: settings.isSetupComplete || false,
-    };
-    this.lodgeSettings.set(id, lodgeSettings);
-    return lodgeSettings;
+    const [newSettings] = await db
+      .insert(lodgeSettings)
+      .values(settings)
+      .returning();
+    return newSettings;
   }
 
   async updateLodgeSettings(
     id: string,
     settings: Partial<InsertLodgeSettings>,
   ): Promise<LodgeSettings | undefined> {
-    const existing = this.lodgeSettings.get(id);
-    if (!existing) return undefined;
-
-    const updated: LodgeSettings = { ...existing, ...settings };
-    this.lodgeSettings.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(lodgeSettings)
+      .set(settings)
+      .where(eq(lodgeSettings.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   // Room methods
   async getAllRooms(): Promise<Room[]> {
-    return Array.from(this.rooms.values());
+    return await db.select().from(rooms);
   }
 
   async getRoom(id: string): Promise<Room | undefined> {
-    return this.rooms.get(id);
+    const [room] = await db.select().from(rooms).where(eq(rooms.id, id));
+    return room || undefined;
   }
 
   async getRoomByNumber(roomNumber: string): Promise<Room | undefined> {
-    return Array.from(this.rooms.values()).find(
-      (room) => room.roomNumber === roomNumber,
-    );
+    const [room] = await db.select().from(rooms).where(eq(rooms.roomNumber, roomNumber));
+    return room || undefined;
   }
 
   async createRoom(room: InsertRoom): Promise<Room> {
-    const id = randomUUID();
-    const newRoom: Room = {
-      ...room,
-      id,
-      status: room.status || "available",
-      floor: room.floor || 1,
-    };
-    this.rooms.set(id, newRoom);
+    const [newRoom] = await db
+      .insert(rooms)
+      .values(room)
+      .returning();
     return newRoom;
   }
 
-  async updateRoom(
-    id: string,
-    room: Partial<InsertRoom>,
-  ): Promise<Room | undefined> {
-    const existing = this.rooms.get(id);
-    if (!existing) return undefined;
-
-    const updated: Room = { ...existing, ...room };
-    this.rooms.set(id, updated);
-    return updated;
+  async updateRoom(id: string, room: Partial<InsertRoom>): Promise<Room | undefined> {
+    const [updated] = await db
+      .update(rooms)
+      .set(room)
+      .where(eq(rooms.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteRoom(id: string): Promise<boolean> {
-    return this.rooms.delete(id);
+    const result = await db.delete(rooms).where(eq(rooms.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
-  async getAvailableRooms(
-    checkinDate: Date,
-    checkoutDate: Date,
-  ): Promise<Room[]> {
-    const availableRooms = Array.from(this.rooms.values()).filter(
-      (room) => room.status === "available",
-    );
-
-    // Check for overlapping bookings
-    const overlappingGuests = Array.from(this.guests.values()).filter(
-      (guest) => {
-        if (guest.status !== "active") return false;
-
-        const guestCheckin = new Date(guest.checkinDate);
-        const guestCheckout = new Date(guest.checkoutDate);
-
-        return checkinDate < guestCheckout && checkoutDate > guestCheckin;
-      },
-    );
+  async getAvailableRooms(checkinDate: Date, checkoutDate: Date): Promise<Room[]> {
+    // Get all rooms
+    const allRooms = await this.getAllRooms();
+    
+    // Get overlapping guests
+    const overlappingGuests = await db
+      .select()
+      .from(guests)
+      .where(
+        and(
+          eq(guests.status, "active"),
+          lt(guests.checkinDate, checkoutDate),
+          gt(guests.checkoutDate, checkinDate)
+        )
+      );
 
     const occupiedRoomIds = new Set(
-      overlappingGuests.map((guest) => guest.roomId),
+      overlappingGuests.map((guest) => guest.roomId).filter(Boolean)
     );
 
-    return availableRooms.filter((room) => !occupiedRoomIds.has(room.id));
+    return allRooms.filter((room) => !occupiedRoomIds.has(room.id));
   }
 
   // Guest methods
   async getAllGuests(): Promise<Guest[]> {
-    return Array.from(this.guests.values());
+    return await db.select().from(guests);
   }
 
   async getGuest(id: string): Promise<Guest | undefined> {
-    return this.guests.get(id);
+    const [guest] = await db.select().from(guests).where(eq(guests.id, id));
+    return guest || undefined;
   }
 
   async getGuestsByPhone(phoneNumber: string): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(
-      (guest) => guest.phoneNumber === phoneNumber,
-    );
+    return await db.select().from(guests).where(eq(guests.phoneNumber, phoneNumber));
   }
 
   async getGuestsByAadhar(aadharNumber: string): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(
-      (guest) => guest.aadharNumber === aadharNumber,
-    );
+    return await db.select().from(guests).where(eq(guests.aadharNumber, aadharNumber));
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {
-    const id = randomUUID();
-    const newGuest: Guest = {
-      ...guest,
-      id,
-      roomId: guest.roomId || null,
-      numberOfGuests: guest.numberOfGuests || 1,
-      discountAmount: guest.discountAmount || "0.00",
-      status: guest.status || "active",
-      createdAt: new Date(),
-    };
-    this.guests.set(id, newGuest);
+    const [newGuest] = await db
+      .insert(guests)
+      .values(guest)
+      .returning();
     return newGuest;
   }
 
@@ -260,45 +231,37 @@ export class MemStorage implements IStorage {
     id: string,
     guest: Partial<InsertGuest>,
   ): Promise<Guest | undefined> {
-    const existing = this.guests.get(id);
-    if (!existing) return undefined;
-
-    const updated: Guest = { ...existing, ...guest };
-    this.guests.set(id, updated);
-    return updated;
+    const [updated] = await db
+      .update(guests)
+      .set(guest)
+      .where(eq(guests.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async getActiveGuests(): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(
-      (guest) => guest.status === "active",
-    );
+    return await db.select().from(guests).where(eq(guests.status, "active"));
   }
 
   // Payment methods
   async getAllPayments(): Promise<Payment[]> {
-    return Array.from(this.payments.values());
+    return await db.select().from(payments);
   }
 
   async getPayment(id: string): Promise<Payment | undefined> {
-    return this.payments.get(id);
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment || undefined;
   }
 
   async getPaymentsByGuest(guestId: string): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(
-      (payment) => payment.guestId === guestId,
-    );
+    return await db.select().from(payments).where(eq(payments.guestId, guestId));
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const id = randomUUID();
-    const newPayment: Payment = {
-      ...payment,
-      id,
-      status: payment.status || "pending",
-      createdAt: new Date(),
-      paidAt: null,
-    };
-    this.payments.set(id, newPayment);
+    const [newPayment] = await db
+      .insert(payments)
+      .values(payment)
+      .returning();
     return newPayment;
   }
 
@@ -306,327 +269,30 @@ export class MemStorage implements IStorage {
     id: string,
     payment: Partial<InsertPayment>,
   ): Promise<Payment | undefined> {
-    const existing = this.payments.get(id);
-    if (!existing) return undefined;
-
-    const updated: Payment = {
-      ...existing,
-      ...payment,
-      paidAt: payment.status === "paid" ? new Date() : existing.paidAt,
-    };
-    this.payments.set(id, updated);
-    return updated;
-  }
-
-  async getPendingPayments(): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(
-      (payment) => payment.status === "pending",
-    );
-  }
-
-  // SMS log methods
-  async createSmsLog(smsLog: InsertSmsLog): Promise<SmsLog> {
-    const id = randomUUID();
-    const newSmsLog: SmsLog = {
-      ...smsLog,
-      id,
-      status: smsLog.status || "sent",
-      sentAt: new Date(),
-    };
-    this.smsLogs.set(id, newSmsLog);
-    return newSmsLog;
-  }
-
-  async getSmsLogsByGuest(guestId: string): Promise<SmsLog[]> {
-    return Array.from(this.smsLogs.values()).filter(
-      (log) => log.guestId === guestId,
-    );
-  }
-}
-
-// Database Storage Implementation
-export class DatabaseStorage implements IStorage {
-  private db: ReturnType<typeof drizzle>;
-  private initPromise: Promise<void>;
-
-  constructor() {
-    const sql = neon(process.env.DATABASE_URL!);
-    this.db = drizzle(sql);
-
-    // Initialize default admin user if it doesn't exist
-    this.initPromise = this.initializeAdminUser();
-  }
-
-  private async initializeAdminUser() {
-    try {
-      console.log("Checking for admin user...");
-      // Direct database call to avoid circular dependency
-      const result = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.username, "admin"))
-        .limit(1);
-      const existingAdmin = result[0];
-      
-      if (!existingAdmin) {
-        console.log("Creating default admin user...");
-        await this.db.insert(users).values({
-          username: "admin",
-          password: "admin123", // In production, this should be hashed
-        });
-        console.log("Default admin user created successfully");
-      } else {
-        console.log("Admin user already exists");
-      }
-    } catch (error) {
-      console.error("Failed to initialize admin user:", error);
-      throw error;
-    }
-  }
-
-  private async ensureInitialized() {
-    await this.initPromise;
-  }
-
-  // User methods
-  async getUser(id: string): Promise<User | undefined> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
-    return result[0];
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    await this.ensureInitialized();
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await this.db.insert(users).values(insertUser).returning();
-    return result[0];
-  }
-
-  // Lodge settings methods
-  async getLodgeSettings(): Promise<LodgeSettings | undefined> {
-    const result = await this.db.select().from(lodgeSettings).limit(1);
-    return result[0];
-  }
-
-  async createLodgeSettings(
-    settings: InsertLodgeSettings,
-  ): Promise<LodgeSettings> {
-    const result = await this.db
-      .insert(lodgeSettings)
-      .values(settings)
-      .returning();
-    return result[0];
-  }
-
-  async updateLodgeSettings(
-    id: string,
-    settings: Partial<InsertLodgeSettings>,
-  ): Promise<LodgeSettings | undefined> {
-    const result = await this.db
-      .update(lodgeSettings)
-      .set(settings)
-      .where(eq(lodgeSettings.id, id))
-      .returning();
-    return result[0];
-  }
-
-  // Room methods
-  async getAllRooms(): Promise<Room[]> {
-    return await this.db.select().from(rooms);
-  }
-
-  async getRoom(id: string): Promise<Room | undefined> {
-    const result = await this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.id, id))
-      .limit(1);
-    return result[0];
-  }
-
-  async getRoomByNumber(roomNumber: string): Promise<Room | undefined> {
-    const result = await this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.roomNumber, roomNumber))
-      .limit(1);
-    return result[0];
-  }
-
-  async createRoom(room: InsertRoom): Promise<Room> {
-    const result = await this.db.insert(rooms).values(room).returning();
-    return result[0];
-  }
-
-  async updateRoom(
-    id: string,
-    room: Partial<InsertRoom>,
-  ): Promise<Room | undefined> {
-    const result = await this.db
-      .update(rooms)
-      .set(room)
-      .where(eq(rooms.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async deleteRoom(id: string): Promise<boolean> {
-    const result = await this.db.delete(rooms).where(eq(rooms.id, id));
-    return result.rowCount > 0;
-  }
-
-  async getAvailableRooms(
-    checkinDate: Date,
-    checkoutDate: Date,
-  ): Promise<Room[]> {
-    // Get all available rooms
-    const availableRooms = await this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.status, "available"));
-
-    // Get overlapping bookings
-    const overlappingGuests = await this.db
-      .select()
-      .from(guests)
-      .where(
-        and(
-          eq(guests.status, "active"),
-          lt(guests.checkinDate, checkoutDate),
-          gt(guests.checkoutDate, checkinDate),
-        ),
-      );
-
-    const occupiedRoomIds = new Set(
-      overlappingGuests.map((guest) => guest.roomId).filter(Boolean),
-    );
-
-    return availableRooms.filter((room) => !occupiedRoomIds.has(room.id));
-  }
-
-  // Guest methods
-  async getAllGuests(): Promise<Guest[]> {
-    return await this.db.select().from(guests);
-  }
-
-  async getGuest(id: string): Promise<Guest | undefined> {
-    const result = await this.db
-      .select()
-      .from(guests)
-      .where(eq(guests.id, id))
-      .limit(1);
-    return result[0];
-  }
-
-  async getGuestsByPhone(phoneNumber: string): Promise<Guest[]> {
-    return await this.db
-      .select()
-      .from(guests)
-      .where(eq(guests.phoneNumber, phoneNumber));
-  }
-
-  async getGuestsByAadhar(aadharNumber: string): Promise<Guest[]> {
-    return await this.db
-      .select()
-      .from(guests)
-      .where(eq(guests.aadharNumber, aadharNumber));
-  }
-
-  async createGuest(guest: InsertGuest): Promise<Guest> {
-    const result = await this.db.insert(guests).values(guest).returning();
-    return result[0];
-  }
-
-  async updateGuest(
-    id: string,
-    guest: Partial<InsertGuest>,
-  ): Promise<Guest | undefined> {
-    const result = await this.db
-      .update(guests)
-      .set(guest)
-      .where(eq(guests.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async getActiveGuests(): Promise<Guest[]> {
-    return await this.db
-      .select()
-      .from(guests)
-      .where(eq(guests.status, "active"));
-  }
-
-  // Payment methods
-  async getAllPayments(): Promise<Payment[]> {
-    return await this.db.select().from(payments);
-  }
-
-  async getPayment(id: string): Promise<Payment | undefined> {
-    const result = await this.db
-      .select()
-      .from(payments)
-      .where(eq(payments.id, id))
-      .limit(1);
-    return result[0];
-  }
-
-  async getPaymentsByGuest(guestId: string): Promise<Payment[]> {
-    return await this.db
-      .select()
-      .from(payments)
-      .where(eq(payments.guestId, guestId));
-  }
-
-  async createPayment(payment: InsertPayment): Promise<Payment> {
-    const result = await this.db.insert(payments).values(payment).returning();
-    return result[0];
-  }
-
-  async updatePayment(
-    id: string,
-    payment: Partial<InsertPayment>,
-  ): Promise<Payment | undefined> {
-    const result = await this.db
+    const [updated] = await db
       .update(payments)
       .set(payment)
       .where(eq(payments.id, id))
       .returning();
-    return result[0];
+    return updated || undefined;
   }
 
   async getPendingPayments(): Promise<Payment[]> {
-    return await this.db
-      .select()
-      .from(payments)
-      .where(eq(payments.status, "pending"));
+    return await db.select().from(payments).where(eq(payments.status, "pending"));
   }
 
   // SMS log methods
   async createSmsLog(smsLog: InsertSmsLog): Promise<SmsLog> {
-    const result = await this.db.insert(smsLogs).values(smsLog).returning();
-    return result[0];
+    const [newSmsLog] = await db
+      .insert(smsLogs)
+      .values(smsLog)
+      .returning();
+    return newSmsLog;
   }
 
   async getSmsLogsByGuest(guestId: string): Promise<SmsLog[]> {
-    return await this.db
-      .select()
-      .from(smsLogs)
-      .where(eq(smsLogs.guestId, guestId));
+    return await db.select().from(smsLogs).where(eq(smsLogs.guestId, guestId));
   }
 }
 
-// Use database storage in production, memory storage for development
-export const storage = process.env.DATABASE_URL
-  ? new DatabaseStorage()
-  : new MemStorage();
+export const storage = new DatabaseStorage();
