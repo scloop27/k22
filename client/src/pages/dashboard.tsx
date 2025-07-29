@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { BilingualText } from "@/components/bilingual-text";
 import { GuestRegistrationModal } from "@/components/guest-registration-modal";
 import { PaymentModal } from "@/components/payment-modal";
+import { GuestDetailsModal } from "@/components/guest-details-modal";
+import { EditGuestModal } from "@/components/edit-guest-modal";
 import { RoomGrid } from "@/components/room-grid";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -41,6 +43,9 @@ export default function Dashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentWithGuest | null>(null);
   const [guestSearch, setGuestSearch] = useState("");
+  const [showGuestDetailsModal, setShowGuestDetailsModal] = useState(false);
+  const [showEditGuestModal, setShowEditGuestModal] = useState(false);
+  const [selectedGuest, setSelectedGuest] = useState<GuestWithRoom | null>(null);
   const { toast } = useToast();
 
   // Queries
@@ -106,6 +111,39 @@ export default function Dashboard() {
   const handlePaymentClick = (payment: PaymentWithGuest) => {
     setSelectedPayment(payment);
     setShowPaymentModal(true);
+  };
+
+  const handleViewGuest = (guest: GuestWithRoom) => {
+    setSelectedGuest(guest);
+    setShowGuestDetailsModal(true);
+  };
+
+  const handleEditGuest = (guest: GuestWithRoom) => {
+    setSelectedGuest(guest);
+    setShowEditGuestModal(true);
+  };
+
+  const handleCheckoutGuest = async (guest: GuestWithRoom) => {
+    try {
+      const response = await apiRequest("PUT", `/api/guests/${guest.id}`, {
+        status: "checked_out"
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Guest checked out successfully",
+        });
+        // Refetch data
+        window.location.reload();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to check out guest",
+        variant: "destructive",
+      });
+    }
   };
 
   const recentGuests = guests?.slice(0, 5) || [];
@@ -453,14 +491,19 @@ export default function Dashboard() {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewGuest(guest)}>
                               <Eye size={16} />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditGuest(guest)}>
                               <Edit size={16} />
                             </Button>
                             {guest.status === "active" && (
-                              <Button variant="ghost" size="sm" className="text-error">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-error hover:text-red-700"
+                                onClick={() => handleCheckoutGuest(guest)}
+                              >
                                 <LogOut size={16} />
                               </Button>
                             )}
@@ -811,6 +854,18 @@ export default function Dashboard() {
         open={showPaymentModal} 
         onOpenChange={setShowPaymentModal}
         payment={selectedPayment}
+      />
+
+      <GuestDetailsModal 
+        open={showGuestDetailsModal} 
+        onOpenChange={setShowGuestDetailsModal}
+        guest={selectedGuest}
+      />
+      
+      <EditGuestModal 
+        open={showEditGuestModal} 
+        onOpenChange={setShowEditGuestModal}
+        guest={selectedGuest}
       />
     </div>
   );

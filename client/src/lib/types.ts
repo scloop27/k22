@@ -16,6 +16,9 @@ export interface GuestWithRoom {
   checkoutDate: string;
   roomId: string | null;
   numberOfGuests: number;
+  totalDays: number;
+  baseAmount: string;
+  discountAmount: string;
   totalAmount: string;
   status: string;
   createdAt: string;
