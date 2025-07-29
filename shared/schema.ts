@@ -82,6 +82,9 @@ export const insertRoomSchema = createInsertSchema(rooms).omit({
 export const insertGuestSchema = createInsertSchema(guests).omit({
   id: true,
   createdAt: true,
+}).extend({
+  checkinDate: z.string().datetime().transform((val) => new Date(val)),
+  checkoutDate: z.string().datetime().transform((val) => new Date(val)),
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
