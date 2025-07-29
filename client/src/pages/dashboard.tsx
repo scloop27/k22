@@ -8,6 +8,8 @@ import { GuestRegistrationModal } from "@/components/guest-registration-modal";
 import { PaymentModal } from "@/components/payment-modal";
 import { GuestDetailsModal } from "@/components/guest-details-modal";
 import { EditGuestModal } from "@/components/edit-guest-modal";
+import { SettingsModal } from "@/components/settings-modal";
+import { RevenueChart } from "@/components/revenue-chart";
 import { RoomGrid } from "@/components/room-grid";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -46,6 +48,7 @@ export default function Dashboard() {
   const [showGuestDetailsModal, setShowGuestDetailsModal] = useState(false);
   const [showEditGuestModal, setShowEditGuestModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<GuestWithRoom | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const { toast } = useToast();
 
   // Queries
@@ -183,7 +186,7 @@ export default function Dashboard() {
                   })}
                 </p>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => setShowSettingsModal(true)}>
                 <Settings size={20} />
               </Button>
               <Button variant="ghost" size="sm" onClick={handleLogout} className="text-error hover:text-red-700">
@@ -704,7 +707,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Revenue Chart Placeholder */}
+            {/* Revenue Chart */}
             <Card>
               <CardHeader>
                 <CardTitle className="font-telugu">
@@ -712,11 +715,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500 font-telugu">
-                    <BilingualText english="Revenue Chart Placeholder" telugu="ఆదాయ చార్ట్ ప్లేస్‌హోల్డర్" />
-                  </p>
-                </div>
+                <RevenueChart payments={payments || []} />
               </CardContent>
             </Card>
 
@@ -866,6 +865,12 @@ export default function Dashboard() {
         open={showEditGuestModal} 
         onOpenChange={setShowEditGuestModal}
         guest={selectedGuest}
+      />
+      
+      <SettingsModal 
+        open={showSettingsModal} 
+        onOpenChange={setShowSettingsModal}
+        settings={lodgeSettings || null}
       />
     </div>
   );
