@@ -240,7 +240,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
+      console.log("Guest creation request body:", JSON.stringify(req.body, null, 2));
       const validatedData = insertGuestSchema.parse(req.body);
+      console.log("Validated data:", JSON.stringify(validatedData, null, 2));
       
       // Check if room is available
       if (validatedData.roomId) {
@@ -273,7 +275,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(guest);
     } catch (error) {
+      console.error("Guest creation error:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Internal server error" });
@@ -302,7 +306,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guest = await storage.updateGuest(id, validatedData);
       res.json(guest);
     } catch (error) {
+      console.error("Guest creation error:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Internal server error" });
