@@ -119,6 +119,7 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/guests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/dashboard"] });
 
       onOpenChange(false);
