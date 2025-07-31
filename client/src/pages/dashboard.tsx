@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +46,9 @@ export default function Dashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentWithGuest | null>(null);
   const [guestSearch, setGuestSearch] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [showGuestDetailsModal, setShowGuestDetailsModal] = useState(false);
   const [showEditGuestModal, setShowEditGuestModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<GuestWithRoom | null>(null);
@@ -66,7 +69,7 @@ export default function Dashboard() {
     queryKey: ["/api/rooms"],
   });
 
-  const { data: guests } = useQuery<GuestWithRoom[]>({
+  const { data: allGuests } = useQuery<GuestWithRoom[]>({
     queryKey: ["/api/guests", guestSearch],
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/guests?search=${guestSearch}`);
@@ -80,6 +83,41 @@ export default function Dashboard() {
     },
     enabled: !!rooms,
   });
+
+  // Process guests with filtering and sorting
+  const guests = useMemo(() => {
+    if (!allGuests) return [];
+    
+    let filteredGuests = [...allGuests];
+    
+    // Apply date filters if set
+    if (dateFromFilter) {
+      const fromDate = new Date(dateFromFilter);
+      filteredGuests = filteredGuests.filter(guest => 
+        new Date(guest.checkinDate) >= fromDate
+      );
+    }
+    
+    if (dateToFilter) {
+      const toDate = new Date(dateToFilter);
+      toDate.setHours(23, 59, 59, 999); // Include entire end date
+      filteredGuests = filteredGuests.filter(guest => 
+        new Date(guest.checkinDate) <= toDate
+      );
+    }
+    
+    // Sort guests by check-in date
+    filteredGuests.sort((a, b) => {
+      const dateA = new Date(a.checkinDate).getTime();
+      const dateB = new Date(b.checkinDate).getTime();
+      
+      return sortOrder === "newest" 
+        ? dateB - dateA // Newest first
+        : dateA - dateB; // Oldest first  
+    });
+    
+    return filteredGuests;
+  }, [allGuests, dateFromFilter, dateToFilter, sortOrder]);
 
   const { data: payments } = useQuery<PaymentWithGuest[]>({
     queryKey: ["/api/payments"],
@@ -406,20 +444,91 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            {/* Guest Search */}
+            {/* Guest Search and Filters */}
             <Card>
               <CardContent className="p-6">
-                <div className="flex space-x-4">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search by name, phone, or Aadhar (పేరు, ఫోన్ లేదా ఆధార్ ద్వారా వెతకండి)"
-                      value={guestSearch}
-                      onChange={(e) => setGuestSearch(e.target.value)}
-                    />
+                <div className="space-y-4">
+                  {/* Text Search */}
+                  <div className="flex space-x-4">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search by name, phone, or Aadhar (పేరు, ఫోన్ లేదా ఆధార్ ద్వారా వెతకండి)"
+                        value={guestSearch}
+                        onChange={(e) => setGuestSearch(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <Button className="font-telugu">
-                    <BilingualText english="Search" telugu="వెతకండి" />
-                  </Button>
+                  
+                  {/* Date Filters and Sort */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 font-telugu mb-2 block">
+                        <BilingualText english="From Date" telugu="తేదీ నుండి" />
+                      </label>
+                      <Input
+                        type="date"
+                        value={dateFromFilter}
+                        onChange={(e) => setDateFromFilter(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 font-telugu mb-2 block">
+                        <BilingualText english="To Date" telugu="తేదీ వరకు" />
+                      </label>
+                      <Input
+                        type="date"
+                        value={dateToFilter}
+                        onChange={(e) => setDateToFilter(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 font-telugu mb-2 block">
+                        <BilingualText english="Sort Order" telugu="క్రమం" />
+                      </label>
+                      <Select value={sortOrder} onValueChange={(value: "newest" | "oldest") => setSortOrder(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="newest" className="font-telugu">
+                            <BilingualText english="Newest First" telugu="కొత్తవి మొదట" />
+                          </SelectItem>
+                          <SelectItem value="oldest" className="font-telugu">
+                            <BilingualText english="Oldest First" telugu="పాతవి మొదట" />
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setDateFromFilter("");
+                          setDateToFilter("");
+                          setGuestSearch("");
+                          setSortOrder("newest");
+                        }}
+                        className="w-full font-telugu"
+                      >
+                        <BilingualText english="Clear Filters" telugu="ఫిల్టర్లు క్లియర్ చేయండి" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Results Summary */}
+                  {guests && (
+                    <div className="text-sm text-gray-600 font-telugu">
+                      <BilingualText 
+                        english={`Showing ${guests.length} guests${dateFromFilter || dateToFilter ? ' (filtered)' : ''}`}
+                        telugu={`${guests.length} అతిథులను చూపిస్తోంది${dateFromFilter || dateToFilter ? ' (ఫిల్టర్ చేసిన)' : ''}`}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
