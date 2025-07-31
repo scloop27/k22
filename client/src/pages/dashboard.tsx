@@ -81,21 +81,6 @@ export default function Dashboard() {
 
   const { data: payments } = useQuery<PaymentWithGuest[]>({
     queryKey: ["/api/payments"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/payments");
-      const paymentData = await response.json();
-      
-      // Enrich payments with guest and room data
-      return paymentData.map((payment: any) => {
-        const guest = guests?.find(g => g.id === payment.guestId);
-        return {
-          ...payment,
-          guest: guest ? { name: guest.name, phoneNumber: guest.phoneNumber } : undefined,
-          room: guest?.room ? { roomNumber: guest.room.roomNumber } : undefined
-        };
-      });
-    },
-    enabled: !!guests,
   });
 
   const handleLogout = async () => {

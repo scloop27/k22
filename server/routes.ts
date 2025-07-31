@@ -315,7 +315,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/payments", async (req, res) => {
     try {
       const payments = await storage.getAllPayments();
-      res.json(payments);
+      
+      // Enrich payments with guest and room data
+      const enrichedPayments = await Promise.all(payments.map(async (payment) => {
+        const guest = await storage.getGuest(payment.guestId);
+        let room = null;
+        
+        if (guest && guest.roomId) {
+          room = await storage.getRoom(guest.roomId);
+        }
+        
+        return {
+          ...payment,
+          guest: guest ? { 
+            name: guest.name, 
+            phoneNumber: guest.phoneNumber 
+          } : undefined,
+          room: room ? { 
+            roomNumber: room.roomNumber 
+          } : undefined
+        };
+      }));
+      
+      res.json(enrichedPayments);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
