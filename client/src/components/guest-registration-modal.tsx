@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BilingualText } from "@/components/bilingual-text";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Room } from "@shared/schema";
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 
 interface GuestRegistrationModalProps {
   open: boolean;
@@ -36,6 +38,8 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
     totalDays: 0,
   });
   const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [isManualDataEntry, setIsManualDataEntry] = useState(false);
+  const [showPastDateWarning, setShowPastDateWarning] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -43,8 +47,31 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
   useEffect(() => {
     if (formData.checkinDate && formData.checkoutDate) {
       checkAvailability();
+      validateDates();
     }
-  }, [formData.checkinDate, formData.checkoutDate]);
+  }, [formData.checkinDate, formData.checkoutDate, isManualDataEntry]);
+
+  const validateDates = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const checkinDate = new Date(formData.checkinDate);
+    const checkoutDate = new Date(formData.checkoutDate);
+    
+    // Check if dates are in the past
+    const isPastDate = checkinDate < today || checkoutDate < today;
+    
+    if (isPastDate && !isManualDataEntry) {
+      setShowPastDateWarning(true);
+    } else {
+      setShowPastDateWarning(false);
+    }
+  };
+
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
 
   useEffect(() => {
     if (formData.roomId && formData.checkinDate && formData.checkoutDate) {
@@ -115,6 +142,8 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
       });
       setCostBreakdown({ baseAmount: 0, discountAmount: 0, totalAmount: 0, totalDays: 0 });
       setDiscountPercentage(0);
+      setIsManualDataEntry(false);
+      setShowPastDateWarning(false);
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/guests"] });
@@ -193,6 +222,7 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
                 type="date"
                 value={formData.checkinDate}
                 onChange={(e) => setFormData({...formData, checkinDate: e.target.value})}
+                min={isManualDataEntry ? undefined : getTodayDate()}
                 required
                 className="mt-2"
               />
@@ -206,9 +236,53 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
                 type="date"
                 value={formData.checkoutDate}
                 onChange={(e) => setFormData({...formData, checkoutDate: e.target.value})}
+                min={isManualDataEntry ? undefined : getTodayDate()}
                 required
                 className="mt-2"
               />
+            </div>
+            
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="manual-entry"
+                  checked={isManualDataEntry}
+                  onCheckedChange={(checked) => setIsManualDataEntry(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="manual-entry" 
+                  className="text-sm font-telugu cursor-pointer"
+                >
+                  <BilingualText 
+                    english="Allow past dates (Manual data entry)" 
+                    telugu="గత తేదీలను అనుమతించు (మాన్యువల్ డేటా ఎంట్రీ)" 
+                  />
+                </Label>
+              </div>
+              
+              {showPastDateWarning && !isManualDataEntry && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-700 font-telugu">
+                    <BilingualText 
+                      english="Past dates are not allowed. Enable manual data entry to use past dates." 
+                      telugu="గత తేదీలు అనుమతించబడవు. గత తేదీలను ఉపయోగించడానికి మాన్యువల్ డేటా ఎంట్రీని ఎనేబుల్ చేయండి." 
+                    />
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {isManualDataEntry && (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-700 font-telugu">
+                    <BilingualText 
+                      english="Warning: You are adding this data manually" 
+                      telugu="హెచ్చరిక: మీరు ఈ డేటాను మాన్యువల్‌గా జోడిస్తున్నారు" 
+                    />
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
             
             <div>
