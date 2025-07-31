@@ -23,10 +23,9 @@ export const lodgeSettings = pgTable("lodge_settings", {
 export const rooms = pgTable("rooms", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   roomNumber: text("room_number").notNull().unique(),
-  roomType: text("room_type").notNull(), // 'single', 'double'
+  roomType: text("room_type").notNull(), // custom room type names like 'single', 'double', 'suite', etc.
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("available"), // 'available', 'occupied', 'maintenance'
-  floor: integer("floor").default(1),
 });
 
 export const guests = pgTable("guests", {

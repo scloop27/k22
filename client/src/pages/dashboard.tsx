@@ -9,6 +9,7 @@ import { PaymentModal } from "@/components/payment-modal";
 import { GuestDetailsModal } from "@/components/guest-details-modal";
 import { EditGuestModal } from "@/components/edit-guest-modal";
 import { SettingsModal } from "@/components/settings-modal";
+import { RoomManagementModal } from "@/components/room-management-modal";
 import { RevenueChart } from "@/components/revenue-chart";
 import { RoomGrid } from "@/components/room-grid";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const [showEditGuestModal, setShowEditGuestModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<GuestWithRoom | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const { toast } = useToast();
 
   // Queries
@@ -507,6 +509,18 @@ export default function Dashboard() {
 
           {/* Rooms Tab */}
           <TabsContent value="rooms" className="space-y-6 mt-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold font-telugu">
+                <BilingualText english="Room Management" telugu="గది నిర్వహణ" />
+              </h2>
+              <Button 
+                onClick={() => setShowRoomManagementModal(true)}
+                className="font-telugu"
+              >
+                <Settings className="mr-2" size={16} />
+                <BilingualText english="Manage Rooms" telugu="గదుల నిర్వహణ" />
+              </Button>
+            </div>
             <RoomGrid rooms={rooms || []} />
           </TabsContent>
 
@@ -856,6 +870,12 @@ export default function Dashboard() {
         open={showSettingsModal} 
         onOpenChange={setShowSettingsModal}
         settings={lodgeSettings || null}
+      />
+      
+      <RoomManagementModal 
+        open={showRoomManagementModal} 
+        onOpenChange={setShowRoomManagementModal}
+        rooms={rooms || []}
       />
     </div>
   );

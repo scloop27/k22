@@ -12,16 +12,11 @@ interface RoomGridProps {
 
 export function RoomGrid({ rooms }: RoomGridProps) {
   const [statusFilter, setStatusFilter] = useState("all");
-  const [floorFilter, setFloorFilter] = useState("all");
-
-  // Get unique floors
-  const floors = Array.from(new Set(rooms.map(room => room.floor || 1))).sort();
 
   // Filter rooms based on selected filters
   const filteredRooms = rooms.filter(room => {
     const statusMatch = statusFilter === "all" || room.status === statusFilter;
-    const floorMatch = floorFilter === "all" || room.floor?.toString() === floorFilter;
-    return statusMatch && floorMatch;
+    return statusMatch;
   });
 
   const getRoomIcon = (status: string) => {
@@ -80,35 +75,16 @@ export function RoomGrid({ rooms }: RoomGridProps) {
   };
 
   const getRoomTypeText = (roomType: string) => {
-    return roomType === "single" ? (
-      <BilingualText english="Single" telugu="సింగిల్" />
-    ) : (
-      <BilingualText english="Double" telugu="డబుల్" />
-    );
+    // Capitalize room type for display
+    const capitalizedType = roomType.charAt(0).toUpperCase() + roomType.slice(1);
+    return capitalizedType;
   };
 
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold font-telugu">
-          <BilingualText english="Room Management" telugu="గది నిర్వహణ" />
-        </h2>
         <div className="flex space-x-4">
-          <Select value={floorFilter} onValueChange={setFloorFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Floors</SelectItem>
-              {floors.map(floor => (
-                <SelectItem key={floor} value={floor.toString()}>
-                  Floor {floor}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-48">
               <SelectValue />
