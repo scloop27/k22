@@ -35,13 +35,12 @@ export default function Onboarding() {
 
   // Step 2: Rooms and Room Types
   const [customRoomTypes, setCustomRoomTypes] = useState([
-    { name: "single", englishName: "Single", teluguName: "సింగిల్" },
-    { name: "double", englishName: "Double", teluguName: "డబుల్" }
+    { name: "single", displayName: "Single" },
+    { name: "double", displayName: "Double" }
   ]);
   const [newRoomType, setNewRoomType] = useState({
     name: "",
-    englishName: "",
-    teluguName: ""
+    displayName: ""
   });
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoom, setNewRoom] = useState<Room>({
@@ -83,10 +82,10 @@ export default function Onboarding() {
   };
 
   const addRoomType = () => {
-    if (!newRoomType.name || !newRoomType.englishName || !newRoomType.teluguName) {
+    if (!newRoomType.name || !newRoomType.displayName) {
       toast({
         title: "Error",
-        description: "All room type fields are required",
+        description: "Both room type ID and display name are required",
         variant: "destructive",
       });
       return;
@@ -102,7 +101,7 @@ export default function Onboarding() {
     }
 
     setCustomRoomTypes([...customRoomTypes, newRoomType]);
-    setNewRoomType({ name: "", englishName: "", teluguName: "" });
+    setNewRoomType({ name: "", displayName: "" });
   };
 
   const removeRoomType = (typeName: string) => {
@@ -331,7 +330,7 @@ export default function Onboarding() {
                   
                   {/* Add New Room Type */}
                   <div className="bg-gray-50 border rounded-lg p-4 mb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label className="font-telugu">
                           <BilingualText english="Type ID (lowercase)" telugu="రకం ID (చిన్న అక్షరాలు)" />
@@ -345,23 +344,12 @@ export default function Onboarding() {
                       </div>
                       <div>
                         <Label className="font-telugu">
-                          <BilingualText english="English Name" telugu="ఆంగ్ల పేరు" />
+                          <BilingualText english="Display Name" telugu="ప్రదర్శన పేరు" />
                         </Label>
                         <Input
-                          value={newRoomType.englishName}
-                          onChange={(e) => setNewRoomType({...newRoomType, englishName: e.target.value})}
+                          value={newRoomType.displayName}
+                          onChange={(e) => setNewRoomType({...newRoomType, displayName: e.target.value})}
                           placeholder="AC Deluxe"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="font-telugu">
-                          <BilingualText english="Telugu Name" telugu="తెలుగు పేరు" />
-                        </Label>
-                        <Input
-                          value={newRoomType.teluguName}
-                          onChange={(e) => setNewRoomType({...newRoomType, teluguName: e.target.value})}
-                          placeholder="AC డీలక్స్"
                           className="mt-1"
                         />
                       </div>
@@ -384,10 +372,7 @@ export default function Onboarding() {
                               <BilingualText english="Type ID" telugu="రకం ID" />
                             </TableHead>
                             <TableHead className="font-telugu">
-                              <BilingualText english="English Name" telugu="ఆంగ్ల పేరు" />
-                            </TableHead>
-                            <TableHead className="font-telugu">
-                              <BilingualText english="Telugu Name" telugu="తెలుగు పేరు" />
+                              <BilingualText english="Display Name" telugu="ప్రదర్శన పేరు" />
                             </TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
@@ -396,8 +381,7 @@ export default function Onboarding() {
                           {customRoomTypes.map((type) => (
                             <TableRow key={type.name}>
                               <TableCell className="font-mono">{type.name}</TableCell>
-                              <TableCell>{type.englishName}</TableCell>
-                              <TableCell className="font-telugu">{type.teluguName}</TableCell>
+                              <TableCell>{type.displayName}</TableCell>
                               <TableCell>
                                 <Button 
                                   variant="ghost" 
@@ -442,9 +426,7 @@ export default function Onboarding() {
                         <SelectContent>
                           {customRoomTypes.map((type) => (
                             <SelectItem key={type.name} value={type.name}>
-                              <span className="font-telugu">
-                                <BilingualText english={type.englishName} telugu={type.teluguName} />
-                              </span>
+                              {type.displayName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -492,15 +474,10 @@ export default function Onboarding() {
                       {rooms.map((room) => (
                         <TableRow key={room.roomNumber}>
                           <TableCell>{room.roomNumber}</TableCell>
-                          <TableCell className="font-telugu">
+                          <TableCell>
                             {(() => {
                               const roomType = customRoomTypes.find(type => type.name === room.roomType);
-                              return roomType ? (
-                                <BilingualText 
-                                  english={roomType.englishName} 
-                                  telugu={roomType.teluguName} 
-                                />
-                              ) : room.roomType;
+                              return roomType ? roomType.displayName : room.roomType;
                             })()}
                           </TableCell>
                           <TableCell>₹{room.basePrice}</TableCell>

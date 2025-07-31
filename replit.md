@@ -16,7 +16,7 @@ Preferred communication style: Simple, everyday language.
 - **Database Integration**: Successfully migrated from in-memory storage to PostgreSQL with Drizzle ORM
 - Set up database connection and pushed schema successfully
 - **Custom Room Types Feature**: Added customizable room type management system
-  - Admins can now create custom room types with English and Telugu names
+  - Admins can now create custom room types with ID and display names
   - Dynamic room type selection in onboarding process
   - Proper validation and error handling for room type management
 - **Complete Functionality**: All features working properly:
