@@ -10,14 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Migration to Replit Environment (July 29, 2025)**
+**Migration to Replit Environment (July 31, 2025)**
 - Successfully migrated project from Replit Agent to standard Replit environment  
 - Fixed TypeScript compilation errors in storage.ts related to schema mismatches
 - **Database Integration**: Successfully migrated from in-memory storage to PostgreSQL with Drizzle ORM
 - Set up database connection and pushed schema successfully
+- **Custom Room Types Feature**: Added customizable room type management system
+  - Admins can now create custom room types with English and Telugu names
+  - Dynamic room type selection in onboarding process
+  - Proper validation and error handling for room type management
 - **Complete Functionality**: All features working properly:
   - Authentication and session management
-  - Lodge setup and configuration  
+  - Lodge setup and configuration with custom room types
   - Room management with real-time status updates
   - Guest registration with date validation fixes
   - Payment processing and SMS notifications

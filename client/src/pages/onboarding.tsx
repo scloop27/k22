@@ -33,11 +33,20 @@ export default function Onboarding() {
     currency: "INR"
   });
 
-  // Step 2: Rooms
+  // Step 2: Rooms and Room Types
+  const [customRoomTypes, setCustomRoomTypes] = useState([
+    { name: "single", englishName: "Single", teluguName: "సింగిల్" },
+    { name: "double", englishName: "Double", teluguName: "డబుల్" }
+  ]);
+  const [newRoomType, setNewRoomType] = useState({
+    name: "",
+    englishName: "",
+    teluguName: ""
+  });
   const [rooms, setRooms] = useState<Room[]>([]);
   const [newRoom, setNewRoom] = useState<Room>({
     roomNumber: "",
-    roomType: "single",
+    roomType: customRoomTypes[0]?.name || "",
     basePrice: ""
   });
 
@@ -66,11 +75,63 @@ export default function Onboarding() {
     }
 
     setRooms([...rooms, newRoom]);
-    setNewRoom({ roomNumber: "", roomType: "single", basePrice: "" });
+    setNewRoom({ roomNumber: "", roomType: customRoomTypes[0]?.name || "", basePrice: "" });
   };
 
   const removeRoom = (roomNumber: string) => {
     setRooms(rooms.filter(room => room.roomNumber !== roomNumber));
+  };
+
+  const addRoomType = () => {
+    if (!newRoomType.name || !newRoomType.englishName || !newRoomType.teluguName) {
+      toast({
+        title: "Error",
+        description: "All room type fields are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (customRoomTypes.find(type => type.name === newRoomType.name)) {
+      toast({
+        title: "Error",
+        description: "Room type name already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCustomRoomTypes([...customRoomTypes, newRoomType]);
+    setNewRoomType({ name: "", englishName: "", teluguName: "" });
+  };
+
+  const removeRoomType = (typeName: string) => {
+    // Don't allow removing the last room type
+    if (customRoomTypes.length <= 1) {
+      toast({
+        title: "Error",
+        description: "At least one room type is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if any rooms are using this type
+    if (rooms.some(room => room.roomType === typeName)) {
+      toast({
+        title: "Error",
+        description: "Cannot delete room type that is being used by rooms",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCustomRoomTypes(customRoomTypes.filter(type => type.name !== typeName));
+    
+    // Update newRoom roomType if it was using this type
+    if (newRoom.roomType === typeName) {
+      setNewRoom({...newRoom, roomType: customRoomTypes.filter(type => type.name !== typeName)[0]?.name || ""});
+    }
   };
 
   const handleNext = () => {
@@ -261,6 +322,100 @@ export default function Onboarding() {
                 <h2 className="text-xl font-semibold mb-6 font-telugu">
                   <BilingualText english="Room Configuration" telugu="గది కాన్ఫిగరేషన్" />
                 </h2>
+
+                {/* Custom Room Types Management */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium mb-4 font-telugu">
+                    <BilingualText english="Manage Room Types" telugu="గది రకాలను నిర్వహించండి" />
+                  </h3>
+                  
+                  {/* Add New Room Type */}
+                  <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="font-telugu">
+                          <BilingualText english="Type ID (lowercase)" telugu="రకం ID (చిన్న అక్షరాలు)" />
+                        </Label>
+                        <Input
+                          value={newRoomType.name}
+                          onChange={(e) => setNewRoomType({...newRoomType, name: e.target.value.toLowerCase().replace(/\s+/g, '')})}
+                          placeholder="ac_deluxe"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="font-telugu">
+                          <BilingualText english="English Name" telugu="ఆంగ్ల పేరు" />
+                        </Label>
+                        <Input
+                          value={newRoomType.englishName}
+                          onChange={(e) => setNewRoomType({...newRoomType, englishName: e.target.value})}
+                          placeholder="AC Deluxe"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="font-telugu">
+                          <BilingualText english="Telugu Name" telugu="తెలుగు పేరు" />
+                        </Label>
+                        <Input
+                          value={newRoomType.teluguName}
+                          onChange={(e) => setNewRoomType({...newRoomType, teluguName: e.target.value})}
+                          placeholder="AC డీలక్స్"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button onClick={addRoomType} size="sm" className="w-full font-telugu">
+                          <Plus size={16} className="mr-2" />
+                          <BilingualText english="Add Type" telugu="రకం జోడించు" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Current Room Types */}
+                  {customRoomTypes.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="font-telugu">
+                              <BilingualText english="Type ID" telugu="రకం ID" />
+                            </TableHead>
+                            <TableHead className="font-telugu">
+                              <BilingualText english="English Name" telugu="ఆంగ్ల పేరు" />
+                            </TableHead>
+                            <TableHead className="font-telugu">
+                              <BilingualText english="Telugu Name" telugu="తెలుగు పేరు" />
+                            </TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {customRoomTypes.map((type) => (
+                            <TableRow key={type.name}>
+                              <TableCell className="font-mono">{type.name}</TableCell>
+                              <TableCell>{type.englishName}</TableCell>
+                              <TableCell className="font-telugu">{type.teluguName}</TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => removeRoomType(type.name)}
+                                  className="text-red-600 hover:text-red-700"
+                                  disabled={customRoomTypes.length <= 1}
+                                >
+                                  <Trash size={16} />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Add Room Form */}
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
@@ -285,16 +440,13 @@ export default function Onboarding() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="single">
-                            <span className="font-telugu">
-                              <BilingualText english="Single" telugu="సింగిల్" />
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="double">
-                            <span className="font-telugu">
-                              <BilingualText english="Double" telugu="డబుల్" />
-                            </span>
-                          </SelectItem>
+                          {customRoomTypes.map((type) => (
+                            <SelectItem key={type.name} value={type.name}>
+                              <span className="font-telugu">
+                                <BilingualText english={type.englishName} telugu={type.teluguName} />
+                              </span>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -341,10 +493,15 @@ export default function Onboarding() {
                         <TableRow key={room.roomNumber}>
                           <TableCell>{room.roomNumber}</TableCell>
                           <TableCell className="font-telugu">
-                            <BilingualText 
-                              english={room.roomType} 
-                              telugu={room.roomType === "single" ? "సింగిల్" : "డబుల్"} 
-                            />
+                            {(() => {
+                              const roomType = customRoomTypes.find(type => type.name === room.roomType);
+                              return roomType ? (
+                                <BilingualText 
+                                  english={roomType.englishName} 
+                                  telugu={roomType.teluguName} 
+                                />
+                              ) : room.roomType;
+                            })()}
                           </TableCell>
                           <TableCell>₹{room.basePrice}</TableCell>
                           <TableCell>
