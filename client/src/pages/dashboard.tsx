@@ -12,6 +12,7 @@ import { SettingsModal } from "@/components/settings-modal";
 import { RoomManagementModal } from "@/components/room-management-modal";
 import { RevenueChart } from "@/components/revenue-chart";
 import { RoomGrid } from "@/components/room-grid";
+import { SMSPanel } from "@/components/sms-panel";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { DashboardStats, GuestWithRoom, PaymentWithGuest } from "@/lib/types";
@@ -225,7 +226,7 @@ export default function Dashboard() {
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" className="font-telugu">
               <BarChart3 className="mr-2" size={16} />
               <BilingualText english="Dashboard" telugu="డాష్‌బోర్డ్" />
@@ -241,6 +242,10 @@ export default function Dashboard() {
             <TabsTrigger value="payments" className="font-telugu">
               <CreditCard className="mr-2" size={16} />
               <BilingualText english="Payments" telugu="చెల్లింపులు" />
+            </TabsTrigger>
+            <TabsTrigger value="sms" className="font-telugu">
+              <Receipt className="mr-2" size={16} />
+              <BilingualText english="SMS" telugu="SMS" />
             </TabsTrigger>
             <TabsTrigger value="analytics" className="font-telugu">
               <BarChart3 className="mr-2" size={16} />
@@ -783,6 +788,11 @@ export default function Dashboard() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* SMS Tab */}
+          <TabsContent value="sms" className="space-y-6 mt-6">
+            <SMSPanel className="max-w-4xl mx-auto" />
           </TabsContent>
 
           {/* Analytics Tab */}

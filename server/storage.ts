@@ -19,7 +19,7 @@ import {
   smsLogs,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, lt, gt, inArray } from "drizzle-orm";
+import { eq, and, lt, gt, inArray, desc, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -290,8 +290,19 @@ export class DatabaseStorage implements IStorage {
     return newSmsLog;
   }
 
-  async getSmsLogsByGuest(guestId: string): Promise<SmsLog[]> {
-    return await db.select().from(smsLogs).where(eq(smsLogs.guestId, guestId));
+  async getSmsLogsByGuest(guestId: string, limit: number = 50): Promise<SmsLog[]> {
+    return await db.select().from(smsLogs)
+      .where(eq(smsLogs.guestId, guestId))
+      .orderBy(desc(smsLogs.sentAt))
+      .limit(limit);
+  }
+
+  async getRecentSmsLogs(days: number = 30): Promise<SmsLog[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    
+    return await db.select().from(smsLogs)
+      .where(gte(smsLogs.sentAt, since.toISOString()));
   }
 }
 

@@ -271,6 +271,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending"
       });
 
+      // Send welcome SMS (async, don't wait for completion)
+      try {
+        const lodgeSettings = await storage.getLodgeSettings();
+        const room = await storage.getRoom(validatedData.roomId!);
+        
+        if (lodgeSettings && room) {
+          // Import SMS functions dynamically to avoid circular imports
+          const { sendWelcomeSMS } = await import("./sms-service");
+          sendWelcomeSMS(guest.id, guest, room, lodgeSettings).catch(error => {
+            console.error('Failed to send welcome SMS:', error);
+          });
+        }
+      } catch (error) {
+        console.error('SMS service error:', error);
+      }
+
       res.json(guest);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -358,6 +374,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Payment not found" });
       }
 
+      // Send payment confirmation SMS if payment was marked as paid
+      if (validatedData.status === "paid") {
+        try {
+          const guest = await storage.getGuest(payment.guestId);
+          const lodgeSettings = await storage.getLodgeSettings();
+          
+          if (guest && lodgeSettings) {
+            const room = guest.roomId ? await storage.getRoom(guest.roomId) : null;
+            
+            if (room) {
+              const { sendPaymentConfirmationSMS } = await import("./sms-service");
+              sendPaymentConfirmationSMS(payment, guest, room, lodgeSettings).catch(error => {
+                console.error('Failed to send payment confirmation SMS:', error);
+              });
+            }
+          }
+        } catch (error) {
+          console.error('SMS service error:', error);
+        }
+      }
+
       res.json(payment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -389,17 +426,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Guest ID, message, and phone number required" });
       }
 
-      // In a real application, you would integrate with an SMS service here
-      // For now, we'll just log the SMS
-      
+      // Use SMS service to send message
+      const { smsService } = await import("./sms-service");
+      const response = await smsService.sendSMS({
+        to: phoneNumber,
+        message
+      });
+
+      // Log the SMS attempt
       const smsLog = await storage.createSmsLog({
         guestId,
         phoneNumber,
         message,
-        status: "sent"
+        status: response.success ? "sent" : "failed"
       });
 
-      res.json({ message: "SMS sent successfully", smsLog });
+      if (response.success) {
+        res.json({ message: "SMS sent successfully", smsLog });
+      } else {
+        res.status(500).json({ message: response.error || "Failed to send SMS", smsLog });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get SMS history for a guest
+  app.get("/api/sms/history/:guestId", async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { guestId } = req.params;
+      const { limit = "50" } = req.query;
+      
+      const history = await storage.getSmsLogsByGuest(guestId, parseInt(limit.toString()));
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get SMS statistics
+  app.get("/api/sms/stats", async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { days = "30" } = req.query;
+      const { smsService } = await import("./sms-service");
+      const stats = await smsService.getSMSStats(parseInt(days.toString()));
+      
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send templated SMS
+  app.post("/api/sms/send-template", async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { templateId, phoneNumber, variables, guestId } = req.body;
+      
+      if (!templateId || !phoneNumber || !variables) {
+        return res.status(400).json({ message: "Template ID, phone number, and variables required" });
+      }
+
+      const { smsService } = await import("./sms-service");
+      const response = await smsService.sendTemplatedSMS(templateId, phoneNumber, variables, guestId);
+
+      if (response.success) {
+        res.json({ message: "SMS sent successfully", response });
+      } else {
+        res.status(500).json({ message: response.error || "Failed to send SMS" });
+      }
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
