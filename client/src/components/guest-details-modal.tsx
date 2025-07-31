@@ -118,6 +118,35 @@ export function GuestDetailsModal({ open, onOpenChange, guest }: GuestDetailsMod
                     </div>
                   </div>
                   
+                  <div className="flex items-center space-x-3">
+                    <Clock className="text-gray-500" size={16} />
+                    <div>
+                      <p className="text-sm text-gray-600 font-telugu">
+                        <BilingualText english="Check-in Time" telugu="చెక్-ఇన్ సమయం" />
+                      </p>
+                      <p className="font-medium">{guest.checkinTime || "—"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="text-gray-500" size={16} />
+                    <div>
+                      <p className="text-sm text-gray-600 font-telugu">
+                        <BilingualText english="Purpose of Visit" telugu="సందర్శన ప్రయోజనం" />
+                      </p>
+                      <p className="font-medium font-telugu">
+                        {guest.purposeOfVisit === "Business" && <BilingualText english="Business" telugu="వ్యాపారం" />}
+                        {guest.purposeOfVisit === "Tourism" && <BilingualText english="Tourism" telugu="పర్యటన" />}
+                        {guest.purposeOfVisit === "Personal" && <BilingualText english="Personal" telugu="వ్యక్తిగతం" />}
+                        {guest.purposeOfVisit === "Medical" && <BilingualText english="Medical" telugu="వైద్యం" />}
+                        {guest.purposeOfVisit === "Education" && <BilingualText english="Education" telugu="విద్య" />}
+                        {guest.purposeOfVisit === "Official" && <BilingualText english="Official" telugu="అధికారిక" />}
+                        {guest.purposeOfVisit === "Other" && <BilingualText english="Other" telugu="ఇతర" />}
+                        {!guest.purposeOfVisit && "—"}
+                      </p>
+                    </div>
+                  </div>
+                  
                   <div>
                     <p className="text-sm text-gray-600 font-telugu mb-2">
                       <BilingualText english="Status" telugu="స్థితి" />

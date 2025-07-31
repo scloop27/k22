@@ -34,7 +34,9 @@ export const guests = pgTable("guests", {
   phoneNumber: text("phone_number").notNull(),
   aadharNumber: text("aadhar_number").notNull(),
   checkinDate: timestamp("checkin_date").notNull(),
+  checkinTime: text("checkin_time").notNull(), // Time in HH:MM format
   checkoutDate: timestamp("checkout_date").notNull(),
+  purposeOfVisit: text("purpose_of_visit").notNull(), // Business, Tourism, Personal, Medical, etc.
   roomId: varchar("room_id").references(() => rooms.id),
   numberOfGuests: integer("number_of_guests").default(1),
   totalDays: integer("total_days").notNull(),

@@ -13,7 +13,9 @@ export interface GuestWithRoom {
   phoneNumber: string;
   aadharNumber: string;
   checkinDate: string;
+  checkinTime?: string;
   checkoutDate: string;
+  purposeOfVisit?: string;
   roomId: string | null;
   numberOfGuests: number;
   totalDays: number;

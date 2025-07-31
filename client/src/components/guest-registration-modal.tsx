@@ -25,7 +25,9 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
     phoneNumber: "",
     aadharNumber: "",
     checkinDate: "",
+    checkinTime: "",
     checkoutDate: "",
+    purposeOfVisit: "",
     roomId: "",
     numberOfGuests: 1,
   });
@@ -136,7 +138,9 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
         phoneNumber: "",
         aadharNumber: "",
         checkinDate: "",
+        checkinTime: "",
         checkoutDate: "",
+        purposeOfVisit: "",
         roomId: "",
         numberOfGuests: 1,
       });
@@ -283,6 +287,53 @@ export function GuestRegistrationModal({ open, onOpenChange, rooms }: GuestRegis
                   </AlertDescription>
                 </Alert>
               )}
+            </div>
+            
+            <div>
+              <Label className="font-telugu">
+                <BilingualText english="Check-in Time" telugu="చెక్-ఇన్ సమయం" /> *
+              </Label>
+              <Input
+                type="time"
+                value={formData.checkinTime}
+                onChange={(e) => setFormData({...formData, checkinTime: e.target.value})}
+                required
+                className="mt-2"
+              />
+            </div>
+            
+            <div>
+              <Label className="font-telugu">
+                <BilingualText english="Purpose of Visit" telugu="సందర్శన ప్రయోజనం" /> *
+              </Label>
+              <Select value={formData.purposeOfVisit} onValueChange={(value) => setFormData({...formData, purposeOfVisit: value})}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select purpose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Business" className="font-telugu">
+                    <BilingualText english="Business" telugu="వ్యాపారం" />
+                  </SelectItem>
+                  <SelectItem value="Tourism" className="font-telugu">
+                    <BilingualText english="Tourism" telugu="పర్యటన" />
+                  </SelectItem>
+                  <SelectItem value="Personal" className="font-telugu">
+                    <BilingualText english="Personal" telugu="వ్యక్తిగతం" />
+                  </SelectItem>
+                  <SelectItem value="Medical" className="font-telugu">
+                    <BilingualText english="Medical" telugu="వైద్యం" />
+                  </SelectItem>
+                  <SelectItem value="Education" className="font-telugu">
+                    <BilingualText english="Education" telugu="విద్య" />
+                  </SelectItem>
+                  <SelectItem value="Official" className="font-telugu">
+                    <BilingualText english="Official" telugu="అధికారిక" />
+                  </SelectItem>
+                  <SelectItem value="Other" className="font-telugu">
+                    <BilingualText english="Other" telugu="ఇతర" />
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div>
