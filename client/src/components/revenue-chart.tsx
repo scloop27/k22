@@ -5,11 +5,11 @@ import type { PaymentWithGuest } from "@/lib/types";
 
 interface RevenueChartProps {
   payments: PaymentWithGuest[];
+  dateRange?: string;
 }
 
-export function RevenueChart({ payments }: RevenueChartProps) {
+export function RevenueChart({ payments, dateRange = "7" }: RevenueChartProps) {
   const chartData = useMemo(() => {
-    // Get last 7 days
     const days: Array<{
       date: string;
       display: string;
@@ -18,7 +18,28 @@ export function RevenueChart({ payments }: RevenueChartProps) {
     }> = [];
     const today = new Date();
     
-    for (let i = 6; i >= 0; i--) {
+    // Determine number of days to show based on dateRange
+    let numDays = 7;
+    switch (dateRange) {
+      case "7":
+        numDays = 7;
+        break;
+      case "30":
+        numDays = 30;
+        break;
+      case "month":
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        numDays = Math.ceil((today.getTime() - startOfMonth.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        break;
+      case "all":
+        // For "all", show last 30 days as a reasonable chart size
+        numDays = 30;
+        break;
+      default:
+        numDays = 7;
+    }
+    
+    for (let i = numDays - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       days.push({
@@ -48,10 +69,10 @@ export function RevenueChart({ payments }: RevenueChartProps) {
     });
 
     return days;
-  }, [payments]);
+  }, [payments, dateRange]);
 
   const totalRevenue = chartData.reduce((sum, day) => sum + day.revenue, 0);
-  const averageRevenue = totalRevenue / chartData.length;
+  const averageRevenue = chartData.length > 0 ? totalRevenue / chartData.length : 0;
 
   return (
     <div className="space-y-4">
@@ -62,7 +83,10 @@ export function RevenueChart({ payments }: RevenueChartProps) {
             ₹{totalRevenue.toLocaleString()}
           </p>
           <p className="text-sm text-gray-600 font-telugu">
-            <BilingualText english="7-Day Total" telugu="7 రోజుల మొత్తం" />
+            <BilingualText 
+              english={`${dateRange === 'all' ? 'Total' : dateRange === 'month' ? 'Monthly' : `${dateRange}-Day`} Revenue`} 
+              telugu={`${dateRange === 'all' ? 'మొత్తం' : dateRange === 'month' ? 'మాసిక' : `${dateRange} రోజుల`} ఆదాయం`} 
+            />
           </p>
         </div>
         <div className="text-center p-4 bg-green-50 rounded-lg">

@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [selectedGuest, setSelectedGuest] = useState<GuestWithRoom | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState("7");
   const { toast } = useToast();
 
   // Queries
@@ -175,9 +176,141 @@ export default function Dashboard() {
     }
   };
 
+  const handleExportCSV = () => {
+    try {
+      const { unparse } = require('papaparse');
+      
+      const csvData = filteredPayments.map(payment => ({
+        'Date': new Date(payment.createdAt!).toLocaleDateString('en-IN'),
+        'Guest Name': payment.guest?.name || 'N/A',
+        'Phone Number': payment.guest?.phoneNumber || 'N/A',
+        'Room Number': payment.room?.roomNumber || 'N/A',
+        'Amount': parseFloat(payment.amount),
+        'Payment Method': payment.paymentMethod,
+        'Status': payment.status,
+        'Paid At': payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : 'N/A'
+      }));
+
+      const csv = unparse(csvData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `payments_${analyticsDateRange}_days_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast({
+        title: "Success",
+        description: `Exported ${filteredPayments.length} payments to CSV`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export CSV",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const { jsPDF } = require('jspdf');
+      require('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(18);
+      doc.text(`Payment Report - ${analyticsDateRange === 'all' ? 'All Time' : `Last ${analyticsDateRange} Days`}`, 20, 20);
+      
+      // Date range
+      doc.setFontSize(12);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 20, 30);
+      
+      // Summary statistics
+      const totalRevenue = filteredPaidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const totalCash = filteredPaidPayments.filter(p => p.paymentMethod === 'cash').reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const totalQR = filteredPaidPayments.filter(p => p.paymentMethod === 'qr').reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      
+      doc.text(`Total Payments: ${filteredPayments.length}`, 20, 40);
+      doc.text(`Total Revenue: ₹${totalRevenue.toLocaleString()}`, 20, 50);
+      doc.text(`Cash Payments: ₹${totalCash.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'cash').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 60);
+      doc.text(`QR Payments: ₹${totalQR.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'qr').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 70);
+      
+      // Table data
+      const tableData = filteredPayments.map(payment => [
+        new Date(payment.createdAt!).toLocaleDateString('en-IN'),
+        payment.guest?.name || 'N/A',
+        payment.guest?.phoneNumber || 'N/A',
+        payment.room?.roomNumber || 'N/A',
+        `₹${parseFloat(payment.amount).toLocaleString()}`,
+        payment.paymentMethod.toUpperCase(),
+        payment.status.toUpperCase()
+      ]);
+
+      doc.autoTable({
+        head: [['Date', 'Guest', 'Phone', 'Room', 'Amount', 'Method', 'Status']],
+        body: tableData,
+        startY: 85,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [75, 85, 99] },
+      });
+
+      doc.save(`payments_${analyticsDateRange}_days_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      toast({
+        title: "Success",
+        description: `Exported ${filteredPayments.length} payments to PDF`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
   const recentGuests = guests?.slice(0, 5) || [];
   const pendingPayments = payments?.filter(p => p.status === "pending") || [];
   const paidPayments = payments?.filter(p => p.status === "paid") || [];
+
+  // Filter payments for analytics based on date range
+  const filteredPayments = useMemo(() => {
+    if (!payments) return [];
+    
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (analyticsDateRange) {
+      case "7":
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case "30":
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "all":
+        return payments; // Return all payments without filtering
+      default:
+        startDate.setDate(now.getDate() - 7);
+    }
+    
+    return payments.filter(payment => {
+      const paymentDate = new Date(payment.createdAt!);
+      return paymentDate >= startDate;
+    });
+  }, [payments, analyticsDateRange]);
+
+  const filteredPaidPayments = filteredPayments.filter(p => p.status === "paid");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -842,7 +975,7 @@ export default function Dashboard() {
                 <BilingualText english="Analytics & Reports" telugu="విశ్లేషణలు & రిపోర్ట్‌లు" />
               </h2>
               <div className="flex space-x-4">
-                <Select defaultValue="7">
+                <Select value={analyticsDateRange} onValueChange={setAnalyticsDateRange}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
@@ -856,12 +989,27 @@ export default function Dashboard() {
                     <SelectItem value="month" className="font-telugu">
                       <BilingualText english="This month" telugu="ఈ నెల" />
                     </SelectItem>
+                    <SelectItem value="all" className="font-telugu">
+                      <BilingualText english="All time" telugu="అన్నింటినీ" />
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <Button className="bg-success hover:bg-green-700 font-telugu">
-                  <Download className="mr-2" size={16} />
-                  Export CSV
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={() => handleExportCSV()} 
+                    className="bg-success hover:bg-green-700 font-telugu"
+                  >
+                    <Download className="mr-2" size={16} />
+                    CSV
+                  </Button>
+                  <Button 
+                    onClick={() => handleExportPDF()} 
+                    className="bg-blue-600 hover:bg-blue-700 font-telugu"
+                  >
+                    <Download className="mr-2" size={16} />
+                    PDF
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -873,7 +1021,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <RevenueChart payments={payments || []} />
+                <RevenueChart payments={filteredPayments} dateRange={analyticsDateRange} />
               </CardContent>
             </Card>
 
@@ -930,10 +1078,10 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          ₹{paidPayments.filter(p => p.paymentMethod === "cash").reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
+                          ₹{filteredPaidPayments.filter(p => p.paymentMethod === "cash").reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {paidPayments.length ? Math.round((paidPayments.filter(p => p.paymentMethod === "cash").length / paidPayments.length) * 100) : 0}%
+                          {filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === "cash").length / filteredPaidPayments.length) * 100) : 0}%
                         </p>
                       </div>
                     </div>
@@ -944,10 +1092,10 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          ₹{paidPayments.filter(p => p.paymentMethod === "qr").reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
+                          ₹{filteredPaidPayments.filter(p => p.paymentMethod === "qr").reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {paidPayments.length ? Math.round((paidPayments.filter(p => p.paymentMethod === "qr").length / paidPayments.length) * 100) : 0}%
+                          {filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === "qr").length / filteredPaidPayments.length) * 100) : 0}%
                         </p>
                       </div>
                     </div>
@@ -966,14 +1114,14 @@ export default function Dashboard() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">{guests?.length || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{filteredPayments?.length || 0}</p>
                     <p className="text-sm text-gray-600 font-telugu">
                       <BilingualText english="Total Bookings" telugu="మొత్తం బుకింగ్‌లు" />
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-gray-900">
-                      ₹{paidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
+                      ₹{filteredPaidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-gray-600 font-telugu">
                       <BilingualText english="Total Revenue" telugu="మొత్తం ఆదాయం" />
@@ -981,16 +1129,16 @@ export default function Dashboard() {
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-gray-900">
-                      ₹{paidPayments.length ? Math.round(paidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0) / paidPayments.length) : 0}
+                      ₹{filteredPaidPayments.length ? Math.round(filteredPaidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0) / filteredPaidPayments.length) : 0}
                     </p>
                     <p className="text-sm text-gray-600 font-telugu">
                       <BilingualText english="Avg. per Booking" telugu="బుకింగ్‌కు సగటు" />
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-gray-900">2.1</p>
+                    <p className="text-2xl font-bold text-gray-900">{filteredPaidPayments.length}</p>
                     <p className="text-sm text-gray-600 font-telugu">
-                      <BilingualText english="Avg. Stay" telugu="సగటు బస" />
+                      <BilingualText english="Paid Bookings" telugu="చెల్లించిన బుకింగ్‌లు" />
                     </p>
                   </div>
                 </div>
