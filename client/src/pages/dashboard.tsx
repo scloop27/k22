@@ -40,6 +40,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import Papa from "papaparse";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -178,8 +181,6 @@ export default function Dashboard() {
 
   const handleExportCSV = () => {
     try {
-      const { unparse } = require('papaparse');
-      
       const csvData = filteredPayments.map(payment => ({
         'Date': new Date(payment.createdAt!).toLocaleDateString('en-IN'),
         'Guest Name': payment.guest?.name || 'N/A',
@@ -191,18 +192,19 @@ export default function Dashboard() {
         'Paid At': payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : 'N/A'
       }));
 
-      const csv = unparse(csvData);
+      const csv = Papa.unparse(csvData);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       
       if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `payments_${analyticsDateRange}_days_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `payments_${analyticsDateRange}_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
 
       toast({
@@ -210,6 +212,7 @@ export default function Dashboard() {
         description: `Exported ${filteredPayments.length} payments to CSV`,
       });
     } catch (error) {
+      console.error('CSV export error:', error);
       toast({
         title: "Error",
         description: "Failed to export CSV",
@@ -220,14 +223,11 @@ export default function Dashboard() {
 
   const handleExportPDF = () => {
     try {
-      const { jsPDF } = require('jspdf');
-      require('jspdf-autotable');
-      
       const doc = new jsPDF();
       
       // Title
       doc.setFontSize(18);
-      doc.text(`Payment Report - ${analyticsDateRange === 'all' ? 'All Time' : `Last ${analyticsDateRange} Days`}`, 20, 20);
+      doc.text(`Payment Report - ${analyticsDateRange === 'all' ? 'All Time' : analyticsDateRange === 'month' ? 'This Month' : `Last ${analyticsDateRange} Days`}`, 20, 20);
       
       // Date range
       doc.setFontSize(12);
@@ -239,22 +239,22 @@ export default function Dashboard() {
       const totalQR = filteredPaidPayments.filter(p => p.paymentMethod === 'qr').reduce((sum, p) => sum + parseFloat(p.amount), 0);
       
       doc.text(`Total Payments: ${filteredPayments.length}`, 20, 40);
-      doc.text(`Total Revenue: ₹${totalRevenue.toLocaleString()}`, 20, 50);
-      doc.text(`Cash Payments: ₹${totalCash.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'cash').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 60);
-      doc.text(`QR Payments: ₹${totalQR.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'qr').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 70);
+      doc.text(`Total Revenue: Rs ${totalRevenue.toLocaleString()}`, 20, 50);
+      doc.text(`Cash Payments: Rs ${totalCash.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'cash').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 60);
+      doc.text(`QR Payments: Rs ${totalQR.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'qr').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 70);
       
       // Table data
       const tableData = filteredPayments.map(payment => [
         new Date(payment.createdAt!).toLocaleDateString('en-IN'),
         payment.guest?.name || 'N/A',
-        payment.guest?.phoneNumber || 'N/A',
+        payment.guest?.phoneNumber || 'N/A', 
         payment.room?.roomNumber || 'N/A',
-        `₹${parseFloat(payment.amount).toLocaleString()}`,
+        `Rs ${parseFloat(payment.amount).toLocaleString()}`,
         payment.paymentMethod.toUpperCase(),
         payment.status.toUpperCase()
       ]);
 
-      doc.autoTable({
+      (doc as any).autoTable({
         head: [['Date', 'Guest', 'Phone', 'Room', 'Amount', 'Method', 'Status']],
         body: tableData,
         startY: 85,
@@ -262,13 +262,14 @@ export default function Dashboard() {
         headStyles: { fillColor: [75, 85, 99] },
       });
 
-      doc.save(`payments_${analyticsDateRange}_days_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`payments_${analyticsDateRange}_${new Date().toISOString().split('T')[0]}.pdf`);
 
       toast({
         title: "Success",
         description: `Exported ${filteredPayments.length} payments to PDF`,
       });
     } catch (error) {
+      console.error('PDF export error:', error);
       toast({
         title: "Error",
         description: "Failed to export PDF",
