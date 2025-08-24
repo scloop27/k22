@@ -476,11 +476,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { days = "30" } = req.query;
-      const { smsService } = await import("./sms-service");
-      const stats = await smsService.getSMSStats(parseInt(days.toString()));
       
-      res.json(stats);
+      // Provide default stats if SMS service is not properly configured
+      try {
+        const { smsService } = await import("./sms-service");
+        const stats = await smsService.getSMSStats(parseInt(days.toString()));
+        res.json(stats);
+      } catch (smsError) {
+        console.error("SMS stats error:", smsError);
+        // Return default stats if SMS service fails
+        res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          successRate: 0,
+          costTotal: 0
+        });
+      }
     } catch (error) {
+      console.error("SMS stats endpoint error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

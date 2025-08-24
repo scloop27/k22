@@ -269,12 +269,14 @@ export class SMSService {
   }) {
     try {
       // Use storage.createSmsLog method instead of direct DB access
-      await storage.createSmsLog({
-        guestId: logData.guestId || null,
-        phoneNumber: logData.phoneNumber,
-        message: logData.message,
-        status: logData.status
-      });
+      if (logData.guestId) {
+        await storage.createSmsLog({
+          guestId: logData.guestId,
+          phoneNumber: logData.phoneNumber,
+          message: logData.message,
+          status: logData.status
+        });
+      }
     } catch (error) {
       console.error('Failed to log SMS:', error);
     }
@@ -296,18 +298,28 @@ export class SMSService {
     successRate: number;
     costTotal: number;
   }> {
-    const logs = await storage.getRecentSmsLogs(days);
+    try {
+      const logs = await storage.getRecentSmsLogs(days);
 
-    const totalSent = logs.filter((log: any) => log.status === 'sent').length;
-    const totalFailed = logs.filter((log: any) => log.status === 'failed').length;
-    const total = totalSent + totalFailed;
-    
-    return {
-      totalSent,
-      totalFailed,
-      successRate: total > 0 ? (totalSent / total) * 100 : 0,
-      costTotal: 0 // Calculate based on your provider's pricing
-    };
+      const totalSent = logs.filter((log: any) => log.status === 'sent').length;
+      const totalFailed = logs.filter((log: any) => log.status === 'failed').length;
+      const total = totalSent + totalFailed;
+      
+      return {
+        totalSent,
+        totalFailed,
+        successRate: total > 0 ? (totalSent / total) * 100 : 0,
+        costTotal: 0 // Calculate based on your provider's pricing
+      };
+    } catch (error) {
+      console.error('Failed to get SMS stats:', error);
+      return {
+        totalSent: 0,
+        totalFailed: 0,
+        successRate: 0,
+        costTotal: 0
+      };
+    }
   }
 }
 

@@ -41,8 +41,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Papa from "papaparse";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -181,31 +181,40 @@ export default function Dashboard() {
 
   const handleExportCSV = () => {
     try {
+      if (filteredPayments.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No payments to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const csvData = filteredPayments.map(payment => ({
         'Date': new Date(payment.createdAt!).toLocaleDateString('en-IN'),
+        'Time': new Date(payment.createdAt!).toLocaleTimeString('en-IN'),
         'Guest Name': payment.guest?.name || 'N/A',
         'Phone Number': payment.guest?.phoneNumber || 'N/A',
-        'Room Number': payment.room?.roomNumber || 'N/A',
-        'Amount': parseFloat(payment.amount),
-        'Payment Method': payment.paymentMethod,
-        'Status': payment.status,
-        'Paid At': payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : 'N/A'
+        'Room': payment.room?.roomNumber || 'N/A',
+        'Amount (Rs)': parseFloat(payment.amount),
+        'Payment Method': payment.paymentMethod?.toUpperCase() || 'N/A',
+        'Status': payment.status?.toUpperCase() || 'N/A',
+        'Paid At': payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') + ' ' + new Date(payment.paidAt).toLocaleTimeString('en-IN') : 'N/A',
+        'Payment Created': new Date(payment.createdAt!).toLocaleDateString('en-IN')
       }));
 
       const csv = Papa.unparse(csvData);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for proper Excel encoding
       
-      if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `payments_${analyticsDateRange}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `payments_${analyticsDateRange}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       toast({
         title: "Success",
@@ -215,7 +224,7 @@ export default function Dashboard() {
       console.error('CSV export error:', error);
       toast({
         title: "Error",
-        description: "Failed to export CSV",
+        description: "Failed to export CSV. Please try again.",
         variant: "destructive",
       });
     }
@@ -223,6 +232,15 @@ export default function Dashboard() {
 
   const handleExportPDF = () => {
     try {
+      if (filteredPayments.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No payments to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const doc = new jsPDF();
       
       // Title
@@ -237,42 +255,58 @@ export default function Dashboard() {
       const totalRevenue = filteredPaidPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
       const totalCash = filteredPaidPayments.filter(p => p.paymentMethod === 'cash').reduce((sum, p) => sum + parseFloat(p.amount), 0);
       const totalQR = filteredPaidPayments.filter(p => p.paymentMethod === 'qr').reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const cashPercent = filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'cash').length / filteredPaidPayments.length) * 100) : 0;
+      const qrPercent = filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'qr').length / filteredPaidPayments.length) * 100) : 0;
       
       doc.text(`Total Payments: ${filteredPayments.length}`, 20, 40);
       doc.text(`Total Revenue: Rs ${totalRevenue.toLocaleString()}`, 20, 50);
-      doc.text(`Cash Payments: Rs ${totalCash.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'cash').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 60);
-      doc.text(`QR Payments: Rs ${totalQR.toLocaleString()} (${filteredPaidPayments.length ? Math.round((filteredPaidPayments.filter(p => p.paymentMethod === 'qr').length / filteredPaidPayments.length) * 100) : 0}%)`, 20, 70);
+      doc.text(`Cash: Rs ${totalCash.toLocaleString()} (${cashPercent}%)`, 20, 60);
+      doc.text(`QR: Rs ${totalQR.toLocaleString()} (${qrPercent}%)`, 20, 70);
       
       // Table data
-      const tableData = filteredPayments.map(payment => [
+      const tableData = filteredPayments.slice(0, 100).map(payment => [
         new Date(payment.createdAt!).toLocaleDateString('en-IN'),
-        payment.guest?.name || 'N/A',
-        payment.guest?.phoneNumber || 'N/A', 
+        (payment.guest?.name || 'N/A').substring(0, 15),
+        payment.guest?.phoneNumber || 'N/A',
         payment.room?.roomNumber || 'N/A',
         `Rs ${parseFloat(payment.amount).toLocaleString()}`,
         payment.paymentMethod.toUpperCase(),
         payment.status.toUpperCase()
       ]);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         head: [['Date', 'Guest', 'Phone', 'Room', 'Amount', 'Method', 'Status']],
         body: tableData,
         startY: 85,
-        styles: { fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [75, 85, 99] },
+        columnStyles: {
+          0: { cellWidth: 25 }, // Date
+          1: { cellWidth: 30 }, // Guest
+          2: { cellWidth: 25 }, // Phone
+          3: { cellWidth: 20 }, // Room
+          4: { cellWidth: 30 }, // Amount
+          5: { cellWidth: 20 }, // Method
+          6: { cellWidth: 20 }  // Status
+        }
       });
+
+      if (filteredPayments.length > 100) {
+        doc.setFontSize(10);
+        doc.text(`Note: Showing first 100 of ${filteredPayments.length} payments`, 20, doc.internal.pageSize.height - 10);
+      }
 
       doc.save(`payments_${analyticsDateRange}_${new Date().toISOString().split('T')[0]}.pdf`);
 
       toast({
         title: "Success",
-        description: `Exported ${filteredPayments.length} payments to PDF`,
+        description: `Exported ${Math.min(filteredPayments.length, 100)} payments to PDF`,
       });
     } catch (error) {
       console.error('PDF export error:', error);
       toast({
         title: "Error",
-        description: "Failed to export PDF",
+        description: "Failed to export PDF. Please try again.",
         variant: "destructive",
       });
     }
@@ -910,7 +944,7 @@ export default function Dashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge className={payment.status === "paid" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}>
+                            <Badge className={payment.status === "paid" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"} data-testid={`badge-status-${payment.id}`}>
                               {payment.status === "paid" ? (
                                 <>
                                   <CheckCircle size={12} className="mr-1" />
@@ -977,7 +1011,7 @@ export default function Dashboard() {
               </h2>
               <div className="flex space-x-4">
                 <Select value={analyticsDateRange} onValueChange={setAnalyticsDateRange}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48" data-testid="select-date-range">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -999,6 +1033,7 @@ export default function Dashboard() {
                   <Button 
                     onClick={() => handleExportCSV()} 
                     className="bg-success hover:bg-green-700 font-telugu"
+                    data-testid="button-export-csv"
                   >
                     <Download className="mr-2" size={16} />
                     CSV
@@ -1006,6 +1041,7 @@ export default function Dashboard() {
                   <Button 
                     onClick={() => handleExportPDF()} 
                     className="bg-blue-600 hover:bg-blue-700 font-telugu"
+                    data-testid="button-export-pdf"
                   >
                     <Download className="mr-2" size={16} />
                     PDF

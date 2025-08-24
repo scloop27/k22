@@ -302,7 +302,7 @@ export class DatabaseStorage implements IStorage {
     since.setDate(since.getDate() - days);
     
     return await db.select().from(smsLogs)
-      .where(gte(smsLogs.sentAt, since.toISOString()));
+      .where(gte(smsLogs.sentAt, since));
   }
 }
 
