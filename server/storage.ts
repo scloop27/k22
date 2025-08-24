@@ -245,7 +245,7 @@ export class DatabaseStorage implements IStorage {
 
   // Payment methods
   async getAllPayments(): Promise<Payment[]> {
-    return await db.select().from(payments);
+    return await db.select().from(payments).orderBy(desc(payments.createdAt));
   }
 
   async getPayment(id: string): Promise<Payment | undefined> {

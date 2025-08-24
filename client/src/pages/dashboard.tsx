@@ -705,87 +705,127 @@ export default function Dashboard() {
 
             {/* Payment List */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="font-telugu">
-                  <BilingualText english="Recent Payments" telugu="ఇటీవలి చెల్లింపులు" />
+                  <BilingualText english="All Payments" telugu="అన్ని చెల్లింపులు" />
+                  <span className="text-sm font-normal text-gray-500 ml-2">({payments?.length || 0})</span>
                 </CardTitle>
+                <div className="text-xs text-gray-500 font-telugu">
+                  <BilingualText english="Latest first" telugu="కొత్తవి మొదట" />
+                </div>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-telugu">
-                        <BilingualText english="Guest" telugu="అతిథి" />
-                      </TableHead>
-                      <TableHead className="font-telugu">
-                        <BilingualText english="Room" telugu="గది" />
-                      </TableHead>
-                      <TableHead className="font-telugu">
-                        <BilingualText english="Amount" telugu="మొత్తం" />
-                      </TableHead>
-                      <TableHead className="font-telugu">
-                        <BilingualText english="Payment Method" telugu="చెల్లింపు మార్గం" />
-                      </TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payments?.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{payment.guest?.name || "—"}</p>
-                            <p className="text-sm text-gray-600">{payment.guest?.phoneNumber || "—"}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{payment.room?.roomNumber || "—"}</TableCell>
-                        <TableCell>₹{parseFloat(payment.amount).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={payment.paymentMethod === "cash" ? "bg-success text-white" : "bg-primary text-white"}>
-                            {payment.paymentMethod === "cash" ? (
-                              <span className="font-telugu">
-                                <BilingualText english="Cash" telugu="నగదు" />
-                              </span>
-                            ) : (
-                              "QR Code"
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={payment.status === "paid" ? "bg-success text-white" : "bg-warning text-white"}>
-                            {payment.status === "paid" ? (
-                              <span className="font-telugu">
-                                <BilingualText english="Paid" telugu="చెల్లించబడింది" />
-                              </span>
-                            ) : (
-                              <span className="font-telugu">
-                                <BilingualText english="Pending" telugu="పెండింగ్" />
-                              </span>
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            {payment.status === "pending" && (
+                <div className="max-h-96 overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white border-b">
+                      <TableRow>
+                        <TableHead className="font-telugu w-[180px]">
+                          <BilingualText english="Guest & Date" telugu="అతిథి & తేదీ" />
+                        </TableHead>
+                        <TableHead className="font-telugu w-[80px]">
+                          <BilingualText english="Room" telugu="గది" />
+                        </TableHead>
+                        <TableHead className="font-telugu w-[100px]">
+                          <BilingualText english="Amount" telugu="మొత్తం" />
+                        </TableHead>
+                        <TableHead className="font-telugu w-[120px]">
+                          <BilingualText english="Method" telugu="మార్గం" />
+                        </TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments?.map((payment) => (
+                        <TableRow key={payment.id} className="hover:bg-gray-50">
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-sm">{payment.guest?.name || "—"}</p>
+                              <p className="text-xs text-gray-500">{payment.guest?.phoneNumber || "—"}</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(payment.createdAt!).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                              {payment.room?.roomNumber || "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-semibold">₹{parseFloat(payment.amount).toLocaleString()}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={payment.paymentMethod === "cash" ? "border-green-300 text-green-700" : "border-blue-300 text-blue-700"}>
+                              {payment.paymentMethod === "cash" ? (
+                                <>
+                                  <CreditCard size={12} className="mr-1" />
+                                  <span className="text-xs">Cash</span>
+                                </>
+                              ) : (
+                                <>
+                                  <QrCode size={12} className="mr-1" />
+                                  <span className="text-xs">QR</span>
+                                </>
+                              )}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={payment.status === "paid" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}>
+                              {payment.status === "paid" ? (
+                                <>
+                                  <CheckCircle size={12} className="mr-1" />
+                                  <span className="text-xs">Paid</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock size={12} className="mr-1" />
+                                  <span className="text-xs">Pending</span>
+                                </>
+                              )}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
+                              {payment.status === "pending" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-green-600 hover:text-green-700 h-8 w-8 p-0"
+                                  onClick={() => handlePaymentClick(payment)}
+                                  title="Mark as Paid"
+                                >
+                                  <CheckCircle size={14} />
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
-                                size="sm" 
-                                className="text-success hover:text-green-700"
-                                onClick={() => handlePaymentClick(payment)}
+                                size="sm"
+                                className="text-gray-500 hover:text-gray-700 h-8 w-8 p-0"
+                                title="View Receipt"
                               >
-                                <CheckCircle size={16} />
+                                <Receipt size={14} />
                               </Button>
-                            )}
-                            <Button variant="ghost" size="sm">
-                              <Receipt size={16} />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {(!payments || payments.length === 0) && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Receipt size={48} className="mx-auto mb-2 text-gray-300" />
+                      <p className="font-telugu">
+                        <BilingualText english="No payments found" telugu="చెల్లింపులు కనుగొనబడలేదు" />
+                      </p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
